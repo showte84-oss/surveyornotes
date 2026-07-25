@@ -5,139 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SGS SURVEYOR NOTES</title>
     
-    <!-- PWA MANIFEST -->
     <meta name="theme-color" content="#2C5E43">
     <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22SGS%20Surveyor%20Notes%22%2C%22short_name%22%3A%22SGS%20Notes%22%2C%22description%22%3A%22SGS%20Surveyor%20App%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f4f7f6%22%2C%22theme_color%22%3A%22%232C5E43%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fvia.placeholder.com%2F512x512.png%2F2C5E43%2FFFFFFF%3Ftext%3DSGS%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
 
-    <!-- CROPPER.JS CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
-    
-    <!-- PDF, EXCEL & FIREBASE LIBRARIES -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
-        :root {
-            --primary: #2C5E43;
-            --primary-light: #3e805b;
-            --bg-color: #f4f7f6;
-            --card-bg: #ffffff;
-            --border: #ccc;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 10px;
-            padding-bottom: 40px; 
-            color: #333;
-        }
-        .container {
-            max-width: 900px;
-            margin: auto;
-            overflow-x: hidden;
-        }
-        h1, h2, h3 {
-            color: var(--primary);
-            word-wrap: break-word;
-            margin-top: 0;
-        }
+        :root { --primary: #2C5E43; --primary-light: #3e805b; --bg-color: #f4f7f6; --card-bg: #ffffff; --border: #ccc; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 10px; padding-bottom: 40px; color: #333; }
+        .container { max-width: 900px; margin: auto; overflow-x: hidden; }
+        h1, h2, h3 { color: var(--primary); word-wrap: break-word; margin-top: 0; }
         
-        /* Action Bar Buttons */
-        .action-bar-btns {
-            display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
-        }
-        .icon-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: none;
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
-            transition: 0.2s;
-            padding: 0;
-        }
+        .action-bar-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+        .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: none; font-size: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.16); transition: 0.2s; padding: 0; }
         .icon-btn:active { transform: scale(0.9); }
 
-        /* 3D Tabs Styling */
-        .tab-header {
-            display: flex;
-            gap: 8px; 
-            margin-bottom: 20px;
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 12px 5px;
-            text-align: center;
-            background: #e0e0e0;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            color: #555;
-            transition: all 0.1s ease;
-            outline: none;
-            box-shadow: 0 4px 0 #b3b3b3, 0 5px 5px rgba(0,0,0,0.15); 
-            position: relative;
-            top: 0;
-        }
-        .tab-btn:active {
-            box-shadow: 0 0 0 #b3b3b3, 0 1px 2px rgba(0,0,0,0.15);
-            top: 4px; 
-        }
-        .tab-btn.active {
-            background: var(--primary);
-            border: 1px solid #1a3d2b;
-            color: white;
-            box-shadow: 0 4px 0 #1a3d2b, 0 5px 5px rgba(0,0,0,0.2);
-        }
-        .tab-btn.active:active {
-            box-shadow: 0 0 0 #1a3d2b, 0 1px 2px rgba(0,0,0,0.2);
-            top: 4px;
-        }
+        .tab-header { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 12px 5px; text-align: center; background: #e0e0e0; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; color: #555; transition: all 0.1s ease; outline: none; box-shadow: 0 4px 0 #b3b3b3, 0 5px 5px rgba(0,0,0,0.15); position: relative; top: 0; }
+        .tab-btn:active { box-shadow: 0 0 0 #b3b3b3, 0 1px 2px rgba(0,0,0,0.15); top: 4px; }
+        .tab-btn.active { background: var(--primary); border: 1px solid #1a3d2b; color: white; box-shadow: 0 4px 0 #1a3d2b, 0 5px 5px rgba(0,0,0,0.2); }
+        .tab-btn.active:active { box-shadow: 0 0 0 #1a3d2b, 0 1px 2px rgba(0,0,0,0.2); top: 4px; }
 
         .tab-content { display: none; animation: fadeIn 0.3s; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .card {
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            width: 100%;
-            box-sizing: border-box;
-        }
+        .card { background: var(--card-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; width: 100%; box-sizing: border-box; }
         .grid-2 { display: grid; grid-template-columns: 1fr; gap: 15px; }
         @media (min-width: 600px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
         
         .form-group { display: flex; flex-direction: column; }
         label { font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
-        input, select, textarea {
-            padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 15px; width: 100%; box-sizing: border-box; font-family: inherit;
-        }
+        input, select, textarea { padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 15px; width: 100%; box-sizing: border-box; font-family: inherit; }
         input:disabled, .readonly-input, textarea:disabled { background-color: #e9ecef; color: #6c757d; }
         
-        .header-with-action {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 5px;
-        }
+        .header-with-action { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 5px; }
 
-        /* EXCEL-LIKE TABLES STYLING */
         .excel-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
         .excel-table th, .excel-table td { border: 1px solid #7f8c8d; padding: 6px; }
         .excel-table th { background-color: #f1c40f; color: #333; text-align: right; width: 35%; font-weight: bold; }
         .excel-table td { background-color: #fff; }
         .excel-table td input { border: none; width: 100%; background: transparent; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; padding: 4px; margin: 0; }
 
-        /* CONTAINER DETAILS TABLE */
         .ctn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .ctn-table th { background-color: #f1c40f; color: #333; border: 1px solid #7f8c8d; padding: 10px 6px; text-align: center; font-weight: bold; font-size: 12px; white-space: nowrap; }
         .ctn-table td { border: 1px solid #7f8c8d; padding: 2px; background: #fff; vertical-align: middle; }
@@ -160,7 +73,6 @@
         .grand-summary { background: var(--primary); color: white; border: 2px solid #1a3d2b; }
         .grand-summary .summary-item { border-bottom: 1px dashed rgba(255,255,255,0.3); }
 
-        /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
         .modal-content { background: #fff; width: 90%; max-width: 450px; padding: 20px; border-radius: 8px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
 
@@ -180,7 +92,6 @@
 <body>
 
 <div class="container" id="app-container">
-    
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; padding-top: 5px; flex-wrap: wrap; gap: 10px;">
         <h1 style="margin: 0; color: var(--primary); font-size: 18px; line-height: 1;">SGS SURVEYOR NOTES</h1>
         <div class="action-bar-btns">
@@ -282,6 +193,31 @@
 
 <div id="print-render-area"></div>
 
+<!-- ✅ THE ULTIMATE EXPORT MANAGER MODAL (Fixes WebView File Bug) -->
+<div class="modal-overlay" id="exportOptionsModal" style="z-index:999999;">
+    <div class="modal-content" style="text-align:center;">
+        <h2 style="color:var(--primary); margin-top:0;" id="exportModalTitle">Export Options</h2>
+        <p style="font-size:13px; color:#555; margin-bottom: 15px;">
+            Android APK တွင် အလိုအလျောက် ဒေါင်းလုဒ်ဆွဲပါက ဖိုင်အမည်နှင့် Extension ပျောက်ဆုံးတတ်ပါသည်။<br>
+            ထို့ကြောင့် <b>Telegram သို့ တိုက်ရိုက်ပို့ခြင်း</b> ကို အကြံပြုပါသည်။
+        </p>
+
+        <button onclick="sendToTelegramBot()" id="btn-tg-send" style="background:#3498db; color:white; padding:12px; width:100%; border:none; border-radius:6px; font-weight:bold; font-size:15px; margin-bottom:10px; cursor:pointer; box-shadow: 0 3px 0 #2980b9;">
+            ☁️ Send to Telegram (Best)
+        </button>
+        
+        <button onclick="shareViaWebShare()" style="background:#9b59b6; color:white; padding:12px; width:100%; border:none; border-radius:6px; font-weight:bold; font-size:15px; margin-bottom:10px; cursor:pointer; box-shadow: 0 3px 0 #8e44ad;">
+            📤 Share (Viber / Drive / Gmail)
+        </button>
+
+        <button onclick="downloadBlobFallback()" style="background:#7f8c8d; color:white; padding:12px; width:100%; border:none; border-radius:6px; font-weight:bold; font-size:15px; margin-bottom:20px; cursor:pointer; box-shadow: 0 3px 0 #636e72;">
+            ⬇️ Save to Phone (Manual Rename)
+        </button>
+        
+        <button onclick="closeExportModal()" style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; font-weight:bold;">Cancel</button>
+    </div>
+</div>
+
 <!-- Crop Modal -->
 <div class="modal-overlay" id="cropModal" style="z-index:99999;">
     <div class="modal-content" id="cropModalContent">
@@ -316,7 +252,6 @@
     </div>
 </div>
 
-<!-- Telegram Settings Modal -->
 <div class="modal-overlay" id="tgSettingsModal" style="z-index:999999;">
     <div class="modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); margin-bottom:15px; padding-bottom:5px;">
@@ -338,9 +273,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
 <script>
-    // =========================================================================================
-    // 🔥 FIREBASE CLOUD DATABASE CONFIGURATION 
-    // =========================================================================================
     const firebaseConfig = {
         apiKey: "YOUR_API_KEY_HERE",
         authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -356,15 +288,12 @@
 
     try {
         if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
+            if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
             database = firebase.database();
             isFirebaseReady = true;
         }
     } catch(e) {}
 
-    // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             let swCode = "self.addEventListener('fetch', function(event) {});";
@@ -592,31 +521,86 @@
     function openSearchModal() { document.getElementById('searchModal').style.display = 'flex'; }
     function closeSearchModal() { document.getElementById('searchModal').style.display = 'none'; }
 
-    // ✅ ROBUST DOWNLOAD SYSTEM (APK WEBVIEW SHARE FIX)
-    function handleFileExport(blob, fileName, mimeType, typeText) {
-        let file = new File([blob], fileName, { type: mimeType });
-        
-        let downloadFallback = function() {
-            let blobUrl = URL.createObjectURL(blob);
-            let a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(()=> URL.revokeObjectURL(blobUrl), 2000);
-            alert("✅ " + typeText + " ဖိုင်ထုတ်လုပ်ခြင်း ပြီးပါပြီ။\n(APK တွင် ဖိုင်မဆင်းပါက ☁️ Telegram ခလုတ်ကို သုံး၍ ပို့ပါ)");
-        };
+    // ============================================================================
+    // ✅ THE NEW ULTIMATE EXPORT MANAGER (Fixes WebView Missing Extension Bug)
+    // ============================================================================
+    let currentExportFile = { blob: null, fileName: '', mimeType: '', typeText: '' };
 
+    function showExportModal(blob, fileName, mimeType, typeText) {
+        currentExportFile = { blob, fileName, mimeType, typeText };
+        document.getElementById('exportModalTitle').innerText = "Export " + typeText;
+        document.getElementById('exportOptionsModal').style.display = 'flex';
+    }
+
+    function closeExportModal() {
+        document.getElementById('exportOptionsModal').style.display = 'none';
+    }
+
+    function shareViaWebShare() {
+        let file = new File([currentExportFile.blob], currentExportFile.fileName, { type: currentExportFile.mimeType });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             navigator.share({
                 files: [file],
-                title: fileName,
-                text: 'SGS Surveyor ' + typeText
-            }).catch(e => downloadFallback());
+                title: currentExportFile.fileName,
+                text: 'SGS Surveyor ' + currentExportFile.typeText
+            }).catch(e => console.log("Share cancelled"));
         } else {
-            downloadFallback();
+            alert("⚠️ သင့်ဖုန်းတွင် Share စနစ် အသုံးပြု၍မရပါ။ အောက်ပါ Telegram သို့မဟုတ် Download စနစ်ကို သုံးပါ။");
         }
+    }
+
+    function downloadBlobFallback() {
+        let ext = currentExportFile.fileName.includes('.') ? currentExportFile.fileName.substring(currentExportFile.fileName.lastIndexOf('.')) : '';
+        alert(`⚠️ အရေးကြီးမှတ်ချက်\n\nဖုန်းထဲသို့ သိမ်းပြီးပါက ဖိုင်ကိုဖွင့်မရလျှင် ဖိုင်အမည်၏ နောက်ဆုံးတွင် [ ${ext} ] ဟု ပြန်လည်ပြင်ဆင် (Rename) ပေးရန် လိုအပ်နိုင်ပါသည်။`);
+        
+        let blobUrl = URL.createObjectURL(currentExportFile.blob);
+        let a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = currentExportFile.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+    }
+
+    function sendToTelegramBot() {
+        let tgToken = localStorage.getItem('sgs_tg_token');
+        let tgChatId = localStorage.getItem('sgs_tg_chat_id');
+        
+        if (!tgToken || !tgChatId) {
+            alert("⚠️ ကျေးဇူးပြု၍ Telegram Setting အရင်ထည့်သွင်းပေးပါ။");
+            closeExportModal();
+            openTelegramSettings();
+            return;
+        }
+
+        let btn = document.getElementById('btn-tg-send');
+        let oldText = btn.innerHTML;
+        btn.innerHTML = "⏳ Sending...";
+
+        let formData = new FormData();
+        formData.append("chat_id", tgChatId);
+        
+        let file = new File([currentExportFile.blob], currentExportFile.fileName, { type: currentExportFile.mimeType });
+        formData.append("document", file);
+        formData.append("caption", `📁 *${currentExportFile.typeText}*\n\n• File Name: ${currentExportFile.fileName}\n• Status: Successfully generated.`);
+        formData.append("parse_mode", "Markdown");
+
+        fetch(`https://api.telegram.org/bot${tgToken}/sendDocument`, { method: "POST", body: formData })
+        .then(res => res.json())
+        .then(response => {
+            btn.innerHTML = oldText;
+            if(response.ok) {
+                alert("✅ Telegram သို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ။");
+                closeExportModal();
+            } else {
+                alert("❌ Error: " + response.description);
+            }
+        })
+        .catch(err => {
+            btn.innerHTML = oldText;
+            alert("❌ Telegram သို့ ပို့ရာတွင် အင်တာနက် အခက်အခဲရှိပါသည်။");
+        });
     }
 
     // ✅ FIX EMPTY PDF/EXCEL: Sync visible input values to their DOM attributes before exporting
@@ -649,7 +633,7 @@
         
         let jsonString = JSON.stringify(fullData, null, 2);
         let blob = new Blob([jsonString], {type: "application/json"});
-        handleFileExport(blob, fileName, "application/json", "Backup JSON");
+        showExportModal(blob, fileName, "application/json", "Backup JSON");
     }
 
     function importBackupFile(event) {
@@ -1063,10 +1047,10 @@
         }
     }
 
-    // ✅ FIX EMPTY FILES: HTML Generation မတိုင်မီ တန်ဖိုးများကို Attributes များအဖြစ် ပြောင်းလဲသိမ်းဆည်းပေးခြင်း
+    // ✅ THE FIX: EXPORT TO PDF
     function exportToDirectPDF() {
         syncInputValues(); 
-
+        
         let defaultName = document.getElementById('job-no-input').value || "SGS_Report";
         let fileName = prompt("PDF ဖိုင်အမည်ကို ရိုက်ထည့်ပါ:", defaultName);
         if (!fileName) return; 
@@ -1167,12 +1151,12 @@
                 document.getElementById('app-container').style.display = 'block'; 
                 btn.innerHTML = oldText;
 
-                handleFileExport(pdfBlob, fileName, "application/pdf", "PDF Report");
+                showExportModal(pdfBlob, fileName, "application/pdf", "PDF Report");
             });
         }, 500);
     }
 
-    // ✅ FIX EMPTY EXCEL FILES: .innerText အစား .textContent ကို အသုံးပြုထားပါသည်
+    // ✅ THE FIX: EXPORT TO EXCEL
     function exportToExcel() {
         if (isVgmEditing) toggleVgmEdit();
         syncInputValues();
@@ -1369,7 +1353,7 @@
                 let blob = new Blob([wbout], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
                 btn.innerHTML = oldText;
                 
-                handleFileExport(blob, fileName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Excel Data");
+                showExportModal(blob, fileName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Excel Data");
                 
             } catch(e) {
                 btn.innerHTML = oldText; 
