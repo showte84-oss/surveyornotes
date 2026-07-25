@@ -282,17 +282,6 @@
 
 <div id="print-render-area"></div>
 
-<!-- ✅ EXPLICIT DOWNLOAD MODAL FOR APK WEBVIEW COMPATIBILITY -->
-<div class="modal-overlay" id="downloadModal" style="z-index:999999;">
-    <div class="modal-content" style="text-align:center;">
-        <h2 style="color:var(--primary); margin-top:0;">✅ File is Ready!</h2>
-        <p style="font-size:14px; color:#555;">ဖိုင်ထုတ်လုပ်ခြင်း အောင်မြင်ပါသည်။ အောက်ပါခလုတ်ကိုနှိပ်၍ ဖုန်းထဲသို့ သိမ်းဆည်းပါ။</p>
-        <a id="directDownloadLink" href="#" download="" style="display:inline-block; background:#27ae60; color:white; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; margin-top:10px; font-size:16px;">💾 Save / Download File</a>
-        <br><br>
-        <button onclick="document.getElementById('downloadModal').style.display='none'" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; margin-top:15px;">Close</button>
-    </div>
-</div>
-
 <!-- Crop Modal -->
 <div class="modal-overlay" id="cropModal" style="z-index:99999;">
     <div class="modal-content" id="cropModalContent">
@@ -603,22 +592,43 @@
     function openSearchModal() { document.getElementById('searchModal').style.display = 'flex'; }
     function closeSearchModal() { document.getElementById('searchModal').style.display = 'none'; }
 
-    // ✅ BLOB URL DOWNLOAD MODAL (APK WebView Compatibility)
-    function triggerCleanBlobDownload(blob, fileName, typeText) {
-        let blobUrl = URL.createObjectURL(blob);
+    // ✅ ROBUST DOWNLOAD SYSTEM (APK WEBVIEW SHARE FIX)
+    function handleFileExport(blob, fileName, mimeType, typeText) {
+        let file = new File([blob], fileName, { type: mimeType });
         
-        let a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        let downloadFallback = function() {
+            let blobUrl = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(()=> URL.revokeObjectURL(blobUrl), 2000);
+            alert("✅ " + typeText + " ဖိုင်ထုတ်လုပ်ခြင်း ပြီးပါပြီ။\n(APK တွင် ဖိုင်မဆင်းပါက ☁️ Telegram ခလုတ်ကို သုံး၍ ပို့ပါ)");
+        };
 
-        let modalLink = document.getElementById('directDownloadLink');
-        modalLink.href = blobUrl;
-        modalLink.download = fileName;
-        modalLink.innerHTML = `💾 Download ${typeText}`;
-        document.getElementById('downloadModal').style.display = 'flex';
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({
+                files: [file],
+                title: fileName,
+                text: 'SGS Surveyor ' + typeText
+            }).catch(e => downloadFallback());
+        } else {
+            downloadFallback();
+        }
+    }
+
+    // ✅ FIX EMPTY PDF/EXCEL: Sync visible input values to their DOM attributes before exporting
+    function syncInputValues() {
+        document.querySelectorAll('input').forEach(el => { if(el.type !== 'file') el.setAttribute('value', el.value); });
+        document.querySelectorAll('textarea').forEach(el => { el.innerHTML = el.value; });
+        document.querySelectorAll('select').forEach(el => {
+            Array.from(el.options).forEach(opt => {
+                if (opt.value === el.value) opt.setAttribute('selected', 'selected');
+                else opt.removeAttribute('selected');
+            });
+        });
     }
 
     function exportBackupFile() {
@@ -630,7 +640,7 @@
         if (!fileName.toLowerCase().endsWith('.json')) fileName += ".json";
         
         let fullData = {
-            sgs_version: "8.5",
+            sgs_version: "8.6",
             sgs_app_data_final: localStorage.getItem('sgs_app_data_final') || "{}",
             sgs_vgm_overrides: localStorage.getItem('sgs_vgm_overrides') || "{}",
             sgs_custom_cols: localStorage.getItem('sgs_custom_cols') || "[]",
@@ -639,7 +649,7 @@
         
         let jsonString = JSON.stringify(fullData, null, 2);
         let blob = new Blob([jsonString], {type: "application/json"});
-        triggerCleanBlobDownload(blob, fileName, "Backup JSON");
+        handleFileExport(blob, fileName, "application/json", "Backup JSON");
     }
 
     function importBackupFile(event) {
@@ -1053,7 +1063,10 @@
         }
     }
 
+    // ✅ FIX EMPTY FILES: HTML Generation မတိုင်မီ တန်ဖိုးများကို Attributes များအဖြစ် ပြောင်းလဲသိမ်းဆည်းပေးခြင်း
     function exportToDirectPDF() {
+        syncInputValues(); 
+
         let defaultName = document.getElementById('job-no-input').value || "SGS_Report";
         let fileName = prompt("PDF ဖိုင်အမည်ကို ရိုက်ထည့်ပါ:", defaultName);
         if (!fileName) return; 
@@ -1090,7 +1103,7 @@
                 
                 <h4 style="background:#f2f2f2; padding:6px; border:1px solid #444; margin:10px 0 5px 0;">JOB DETAILS</h4>
                 <table style="width:100%; border-collapse:collapse; font-size:11px;">
-                    ${Array.from(document.querySelectorAll('#jobDetailsTable tr')).map(tr => `<tr><th style="border:1px solid #444; padding:5px; text-align:left; width:35%;">${tr.cells[0].innerText}</th><td style="border:1px solid #444; padding:5px;">${tr.cells[1].querySelector('input')?.value || ''}</td></tr>`).join('')}
+                    ${Array.from(document.querySelectorAll('#jobDetailsTable tr')).map(tr => `<tr><th style="border:1px solid #444; padding:5px; text-align:left; width:35%;">${tr.cells[0].textContent}</th><td style="border:1px solid #444; padding:5px;">${tr.cells[1].querySelector('input')?.value || ''}</td></tr>`).join('')}
                 </table>
                 
                 <h4 style="background:#f2f2f2; padding:6px; border:1px solid #444; margin:15px 0 5px 0;">CONTAINER DETAILS</h4>
@@ -1109,7 +1122,7 @@
 
                 <h4 style="background:#2C5E43; color:white; padding:6px; border:1px solid #444; margin:15px 0 5px 0;">GRAND SUMMARY</h4>
                 <table style="width:100%; border-collapse:collapse; font-size:11px;">
-                    ${Array.from(document.querySelectorAll('.grand-summary .summary-item')).map(item => `<tr><th style="border:1px solid #444; padding:6px; text-align:left; background:#f9f9f9; width:50%;">${item.querySelector('span').innerText}</th><td style="border:1px solid #444; padding:6px; font-weight:bold; width:50%;">${item.querySelector('strong').innerText}</td></tr>`).join('')}
+                    ${Array.from(document.querySelectorAll('.grand-summary .summary-item')).map(item => `<tr><th style="border:1px solid #444; padding:6px; text-align:left; background:#f9f9f9; width:50%;">${item.querySelector('span').textContent}</th><td style="border:1px solid #444; padding:6px; font-weight:bold; width:50%;">${item.querySelector('strong').textContent}</td></tr>`).join('')}
                 </table>
 
                 <div style="margin-top:20px; border:1px solid #444; padding:10px; background:#f9f9f9; font-size:11px;">
@@ -1124,7 +1137,7 @@
         renderArea.querySelectorAll('.exclude-export, button, small').forEach(el => el.remove());
         renderArea.querySelectorAll('input').forEach(inp => { 
             let span = document.createElement('span'); 
-            span.innerText = inp.value; 
+            span.textContent = inp.value || inp.getAttribute('value') || ''; 
             inp.parentNode.replaceChild(span, inp); 
         });
 
@@ -1154,13 +1167,16 @@
                 document.getElementById('app-container').style.display = 'block'; 
                 btn.innerHTML = oldText;
 
-                triggerCleanBlobDownload(pdfBlob, fileName, "PDF Report");
+                handleFileExport(pdfBlob, fileName, "application/pdf", "PDF Report");
             });
         }, 500);
     }
 
+    // ✅ FIX EMPTY EXCEL FILES: .innerText အစား .textContent ကို အသုံးပြုထားပါသည်
     function exportToExcel() {
         if (isVgmEditing) toggleVgmEdit();
+        syncInputValues();
+
         let defaultName = document.getElementById('job-no-input').value || "SGS_Data";
         let fileName = prompt("Excel ဖိုင်အမည်ကို ရိုက်ထည့်ပါ:", defaultName);
         if (!fileName) return; 
@@ -1218,7 +1234,7 @@
 
                 let jobData = [["JOB DETAILS"], []];
                 document.querySelectorAll('#jobDetailsTable tr').forEach(r => { 
-                    let labelText = r.querySelector('th') ? r.querySelector('th').innerText.replace(':','') : ''; 
+                    let labelText = r.querySelector('th') ? r.querySelector('th').textContent.replace(':','') : ''; 
                     let inp = r.querySelector('input'); 
                     let val = inp ? inp.value : '';
                     if (inp && inp.type === 'date' && val && val.includes('-')) { 
@@ -1274,8 +1290,8 @@
                 let vData = [["VGM SUMMARY"], [], ["Sr.", "Container Number", "Number of Bags", "Per bag Weight", "Total Cargo Weight", ...customColumns, "Additional Kgs", "Container Tare", "Total Weight (kgs)"]];
                 for(let i=1; i<=noOfCtn; i++) {
                     let ctnNo = document.getElementById(`ctn-no-input-${i}`)?.value || '-';
-                    let bags = document.getElementById(`ctn-bagcount-${i}`)?.value || document.getElementById(`ctn-bags-${i}`)?.innerText || '0';
-                    let avgGross = document.getElementById(`ctn-avg-gross-${i}`)?.innerText || '0.000';
+                    let bags = document.getElementById(`ctn-bagcount-${i}`)?.value || document.getElementById(`ctn-bags-${i}`)?.textContent || '0';
+                    let avgGross = document.getElementById(`ctn-avg-gross-${i}`)?.textContent || '0.000';
                     
                     let cargoWtVal = (parseFloat(bags) || 0) * (parseFloat(avgGross) || 0);
                     let cargoWtStr = cargoWtVal.toFixed(3);
@@ -1296,7 +1312,7 @@
                     let vgmTotEl = document.getElementById(`vgm-tot-${i}`);
                     let vgmTot = '0.000';
                     if (vgmTotEl) {
-                        vgmTot = vgmTotEl.innerText;
+                        vgmTot = vgmTotEl.textContent;
                     } else {
                         additionsSum += parseFloat(addVal) || 0;
                         let total = cargoWtVal + additionsSum + (parseFloat(tareVal) || 0);
@@ -1315,7 +1331,7 @@
                 document.querySelectorAll('.grand-summary .summary-item').forEach(i => { 
                     let span = i.querySelector('span');
                     let strong = i.querySelector('strong');
-                    if(span && strong) gsData.push([span.innerText.replace(':',''), strong.innerText]); 
+                    if(span && strong) gsData.push([span.textContent.replace(':',''), strong.textContent]); 
                 });
                 let wsSum = XLSX.utils.aoa_to_sheet(gsData); 
                 styleWorksheetCells(wsSum);
@@ -1324,7 +1340,7 @@
 
                 for(let i=1; i<=noOfCtn; i++) {
                     let tTitleEl = document.getElementById(`ctn-tally-title-${i}`);
-                    let tTitle = tTitleEl ? tTitleEl.innerText.toUpperCase() : `CONTAINER ${i}`;
+                    let tTitle = tTitleEl ? tTitleEl.textContent.toUpperCase() : `CONTAINER ${i}`;
                     let tData = [[tTitle], [], ["Weight Group (Kg)", "Bag Count", "Total Wt (Kg)"]];
                     
                     let list = document.getElementById(`tally-list-${i}`);
@@ -1340,8 +1356,8 @@
                     tData.push([]); 
                     let ctnBagsEl = document.getElementById(`ctn-bags-${i}`);
                     let gsGrossEl = document.getElementById(`gs-gross-placeholder-${i}`);
-                    tData.push(["Total Bags:", ctnBagsEl ? ctnBagsEl.innerText : '0']); 
-                    tData.push(["Total Weight:", gsGrossEl ? gsGrossEl.innerText : '0.000']);
+                    tData.push(["Total Bags:", ctnBagsEl ? ctnBagsEl.textContent : '0']); 
+                    tData.push(["Total Weight:", gsGrossEl ? gsGrossEl.textContent : '0.000']);
                     
                     let wsT = XLSX.utils.aoa_to_sheet(tData); 
                     styleWorksheetCells(wsT);
@@ -1352,7 +1368,8 @@
                 let wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
                 let blob = new Blob([wbout], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
                 btn.innerHTML = oldText;
-                triggerCleanBlobDownload(blob, fileName, "Excel Data");
+                
+                handleFileExport(blob, fileName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Excel Data");
                 
             } catch(e) {
                 btn.innerHTML = oldText; 
