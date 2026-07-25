@@ -155,7 +155,6 @@
             <h2>Weight Setup</h2>
             <div class="grid-2">
                 <div class="form-group"><label>No Of CTN (FCL)</label><select id="noOfCtn" onchange="this.setAttribute('value', this.value); handleCtnChange()"></select></div>
-                <!-- Bags Sync -->
                 <div class="form-group"><label>No. of Bags each CTN</label><input type="number" id="bagsPerCtn" value="500" oninput="updateAllCtnBags()"></div>
                 <div class="form-group"><label>Tare Weight Per Bag (Kg)</label><input type="number" step="0.001" id="tareWt" value="0.120" onchange="this.setAttribute('value', this.value); recalculateAll()"></div>
                 <div class="form-group"><label>Net Wt Per Bags (Kg)</label><input type="number" step="0.001" id="netWt" value="50.000" onchange="this.setAttribute('value', this.value); recalculateAll()"></div>
@@ -200,28 +199,19 @@
 
 <div id="print-render-area"></div>
 
-<!-- EXPORT MANAGER MODAL -->
+<!-- EXPORT MANAGER MODAL (Telegram Only) -->
 <div class="modal-overlay" id="exportOptionsModal" style="z-index:999999;">
     <div class="modal-content" style="text-align:center;">
         <h2 style="color:var(--primary); margin-top:0;" id="exportModalTitle">Export Options</h2>
-        <p style="font-size:13px; color:#555; margin-bottom: 15px;">
-            Android APK တွင် အလိုအလျောက် ဒေါင်းလုဒ်ဆွဲပါက ဖိုင်အမည်နှင့် Extension ပျောက်ဆုံးတတ်ပါသည်။<br>
-            ထို့ကြောင့် <b>Telegram သို့ တိုက်ရိုက်ပို့ခြင်း</b> ကို အကြံပြုပါသည်။
+        <p style="font-size:14px; color:#555; margin-bottom: 20px;">
+            ဖိုင်ထုတ်လုပ်ခြင်း အောင်မြင်ပါသည်။ အောက်ပါခလုတ်ကိုနှိပ်၍ Telegram သို့ တိုက်ရိုက်ပေးပို့ပါ။
         </p>
 
-        <button onclick="sendToTelegramBot()" id="btn-tg-send" style="background:#3498db; color:white; padding:12px; width:100%; border:none; border-radius:6px; font-weight:bold; font-size:15px; margin-bottom:10px; cursor:pointer; box-shadow: 0 3px 0 #2980b9;">
-            ☁️ Send to Telegram (Best)
+        <button onclick="sendToTelegramBot()" id="btn-tg-send" style="background:#3498db; color:white; padding:15px; width:100%; border:none; border-radius:6px; font-weight:bold; font-size:16px; margin-bottom:15px; cursor:pointer; box-shadow: 0 4px 0 #2980b9;">
+            ☁️ Send to Telegram
         </button>
         
-        <button onclick="shareViaWebShare()" style="background:#9b59b6; color:white; padding:12px; width:100%; border:none; border-radius:6px; font-weight:bold; font-size:15px; margin-bottom:10px; cursor:pointer; box-shadow: 0 3px 0 #8e44ad;">
-            📤 Share (Viber / Drive / Gmail)
-        </button>
-
-        <button onclick="downloadBlobFallback()" style="background:#7f8c8d; color:white; padding:12px; width:100%; border:none; border-radius:6px; font-weight:bold; font-size:15px; margin-bottom:20px; cursor:pointer; box-shadow: 0 3px 0 #636e72;">
-            ⬇️ Save to Phone (Manual Rename)
-        </button>
-        
-        <button onclick="closeExportModal()" style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; font-weight:bold;">Cancel</button>
+        <button onclick="closeExportModal()" style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; font-weight:bold; width:100%;">Cancel</button>
     </div>
 </div>
 
@@ -329,7 +319,6 @@
 
     let vgmOverrides = safeParseJSON(localStorage.getItem('sgs_vgm_overrides'), {});
     let isVgmEditing = false;
-    // SGS Seal ကို Default Column အဖြစ် သတ်မှတ်ထားသည်
     let customColumns = ['SGS Seal']; 
     let loadedCols = safeParseJSON(localStorage.getItem('sgs_custom_cols'), []);
     if (Array.isArray(loadedCols) && loadedCols.length > 0) customColumns = loadedCols;
@@ -347,7 +336,6 @@
         loadFromStorage();
     });
 
-    // Date ကို DD-MMM-YYYY ပြောင်းပေးမည့် Function
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     function updateDateDisplay(dateInput) {
         let val = dateInput.value;
@@ -363,7 +351,6 @@
         dateInput.setAttribute('value', val);
     }
 
-    // Bags အရေအတွက်ကို Container ဇယားများသို့ ချိတ်ဆက် (Sync) ပေးမည့် Function
     function updateAllCtnBags() {
         let globalBags = document.getElementById('bagsPerCtn').value;
         document.getElementById('bagsPerCtn').setAttribute('value', globalBags);
@@ -573,33 +560,6 @@
         document.getElementById('exportOptionsModal').style.display = 'none';
     }
 
-    function shareViaWebShare() {
-        let file = new File([currentExportFile.blob], currentExportFile.fileName, { type: currentExportFile.mimeType });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({
-                files: [file],
-                title: currentExportFile.fileName,
-                text: 'SGS Surveyor ' + currentExportFile.typeText
-            }).catch(e => console.log("Share cancelled"));
-        } else {
-            alert("⚠️ သင့်ဖုန်းတွင် Share စနစ် အသုံးပြု၍မရပါ။ အောက်ပါ Telegram သို့မဟုတ် Download စနစ်ကို သုံးပါ။");
-        }
-    }
-
-    function downloadBlobFallback() {
-        let ext = currentExportFile.fileName.includes('.') ? currentExportFile.fileName.substring(currentExportFile.fileName.lastIndexOf('.')) : '';
-        alert(`⚠️ အရေးကြီးမှတ်ချက်\n\nဖုန်းထဲသို့ သိမ်းပြီးပါက ဖိုင်ကိုဖွင့်မရလျှင် ဖိုင်အမည်၏ နောက်ဆုံးတွင် [ ${ext} ] ဟု ပြန်လည်ပြင်ဆင် (Rename) ပေးရန် လိုအပ်နိုင်ပါသည်။`);
-        
-        let blobUrl = URL.createObjectURL(currentExportFile.blob);
-        let a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = currentExportFile.fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-    }
-
     function sendToTelegramBot() {
         let tgToken = localStorage.getItem('sgs_tg_token');
         let tgChatId = localStorage.getItem('sgs_tg_chat_id');
@@ -716,7 +676,7 @@
         let tgChatId = localStorage.getItem('sgs_tg_chat_id');
         
         if (!tgToken || !tgChatId) {
-            alert("⚠️ ကျေးဇူးပြု၍ ⚙️ Settings ခလုတ်ကို နှိပ်ပြီး Telegram Bot Token နှင့် Chat ID အရင်ထည့်သွင်းပေးပါခင်ဗျာ။");
+            alert("⚠️ ကျေးဇူးပြု၍ Telegram Setting အရင်ထည့်သွင်းပေးပါ။");
             openTelegramSettings();
             return;
         }
@@ -927,7 +887,6 @@
             let ctnBags = currentData.inputs[`ctn-bagcount-${i}`];
             let bagVal = (ctnBags !== undefined && ctnBags !== '') ? ctnBags : globalBags;
 
-            // ✅ အချိန်ကို နာရီပုံစံရွေးနိုင်ရန် type="time" သို့ ပြန်ပြောင်းထားသည်
             ctnTableHTML += `<tr>
                 <td style="text-align: center;">${i}</td>
                 <td><input type="text" id="ctn-truck-${i}" style="min-width: 110px;" oninput="saveToStorage()"></td>
