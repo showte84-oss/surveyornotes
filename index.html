@@ -5,52 +5,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SGS SURVEYOR NOTES</title>
     
+    <!-- PWA MANIFEST -->
     <meta name="theme-color" content="#2C5E43">
     <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22SGS%20Surveyor%20Notes%22%2C%22short_name%22%3A%22SGS%20Notes%22%2C%22description%22%3A%22SGS%20Surveyor%20App%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f4f7f6%22%2C%22theme_color%22%3A%22%232C5E43%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fvia.placeholder.com%2F512x512.png%2F2C5E43%2FFFFFFF%3Ftext%3DSGS%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
 
+    <!-- CROPPER.JS CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    
+    <!-- PDF, EXCEL & FIREBASE LIBRARIES -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
-        :root { --primary: #2C5E43; --primary-light: #3e805b; --bg-color: #f4f7f6; --card-bg: #ffffff; --border: #ccc; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 10px; padding-bottom: 40px; color: #333; }
-        .container { max-width: 900px; margin: auto; overflow-x: hidden; }
-        h1, h2, h3 { color: var(--primary); word-wrap: break-word; margin-top: 0; }
+        :root {
+            --primary: #2C5E43;
+            --primary-light: #3e805b;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --border: #ccc;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 10px;
+            padding-bottom: 40px; 
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            overflow-x: hidden;
+        }
+        h1, h2, h3 {
+            color: var(--primary);
+            word-wrap: break-word;
+            margin-top: 0;
+        }
         
-        .action-bar-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-        .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: none; font-size: 16px; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.16); transition: 0.2s; padding: 0; }
+        /* Action Bar Buttons */
+        .action-bar-btns {
+            display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+        }
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+            transition: 0.2s;
+            padding: 0;
+        }
         .icon-btn:active { transform: scale(0.9); }
 
-        .tab-header { display: flex; gap: 8px; margin-bottom: 20px; }
-        .tab-btn { flex: 1; padding: 12px 5px; text-align: center; background: #e0e0e0; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; color: #555; transition: all 0.1s ease; outline: none; box-shadow: 0 4px 0 #b3b3b3, 0 5px 5px rgba(0,0,0,0.15); position: relative; top: 0; }
-        .tab-btn:active { box-shadow: 0 0 0 #b3b3b3, 0 1px 2px rgba(0,0,0,0.15); top: 4px; }
-        .tab-btn.active { background: var(--primary); border: 1px solid #1a3d2b; color: white; box-shadow: 0 4px 0 #1a3d2b, 0 5px 5px rgba(0,0,0,0.2); }
-        .tab-btn.active:active { box-shadow: 0 0 0 #1a3d2b, 0 1px 2px rgba(0,0,0,0.2); top: 4px; }
+        /* 3D Tabs Styling */
+        .tab-header {
+            display: flex;
+            gap: 8px; 
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 5px;
+            text-align: center;
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+            transition: all 0.1s ease;
+            outline: none;
+            box-shadow: 0 4px 0 #b3b3b3, 0 5px 5px rgba(0,0,0,0.15); 
+            position: relative;
+            top: 0;
+        }
+        .tab-btn:active {
+            box-shadow: 0 0 0 #b3b3b3, 0 1px 2px rgba(0,0,0,0.15);
+            top: 4px; 
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            border: 1px solid #1a3d2b;
+            color: white;
+            box-shadow: 0 4px 0 #1a3d2b, 0 5px 5px rgba(0,0,0,0.2);
+        }
+        .tab-btn.active:active {
+            box-shadow: 0 0 0 #1a3d2b, 0 1px 2px rgba(0,0,0,0.2);
+            top: 4px;
+        }
 
         .tab-content { display: none; animation: fadeIn 0.3s; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .card { background: var(--card-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+        .card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
         .grid-2 { display: grid; grid-template-columns: 1fr; gap: 15px; }
         @media (min-width: 600px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
         
         .form-group { display: flex; flex-direction: column; }
         label { font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
-        input, select, textarea { padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 15px; width: 100%; box-sizing: border-box; font-family: inherit; }
+        input, select, textarea {
+            padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 15px; width: 100%; box-sizing: border-box; font-family: inherit;
+        }
         input:disabled, .readonly-input, textarea:disabled { background-color: #e9ecef; color: #6c757d; }
         
-        .header-with-action { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 5px; }
+        .header-with-action {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 5px;
+        }
 
+        /* EXCEL-LIKE TABLES STYLING */
         .excel-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
         .excel-table th, .excel-table td { border: 1px solid #7f8c8d; padding: 6px; }
         .excel-table th { background-color: #f1c40f; color: #333; text-align: right; width: 35%; font-weight: bold; }
         .excel-table td { background-color: #fff; }
         .excel-table td input { border: none; width: 100%; background: transparent; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; padding: 4px; margin: 0; }
 
+        /* CONTAINER DETAILS TABLE */
         .ctn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .ctn-table th { background-color: #f1c40f; color: #333; border: 1px solid #7f8c8d; padding: 10px 6px; text-align: center; font-weight: bold; font-size: 12px; white-space: nowrap; }
         .ctn-table td { border: 1px solid #7f8c8d; padding: 2px; background: #fff; vertical-align: middle; }
@@ -73,6 +160,7 @@
         .grand-summary { background: var(--primary); color: white; border: 2px solid #1a3d2b; }
         .grand-summary .summary-item { border-bottom: 1px dashed rgba(255,255,255,0.3); }
 
+        /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
         .modal-content { background: #fff; width: 90%; max-width: 450px; padding: 20px; border-radius: 8px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
 
@@ -92,6 +180,7 @@
 <body>
 
 <div class="container" id="app-container">
+    
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; padding-top: 5px; flex-wrap: wrap; gap: 10px;">
         <h1 style="margin: 0; color: var(--primary); font-size: 18px; line-height: 1;">SGS SURVEYOR NOTES</h1>
         <div class="action-bar-btns">
@@ -193,17 +282,18 @@
 
 <div id="print-render-area"></div>
 
-<!-- ✅ SAFE BLOB DOWNLOAD MODAL FOR APK WEBVIEW -->
+<!-- ✅ EXPLICIT DOWNLOAD MODAL FOR APK WEBVIEW COMPATIBILITY -->
 <div class="modal-overlay" id="downloadModal" style="z-index:999999;">
     <div class="modal-content" style="text-align:center;">
-        <h2 style="color:var(--primary); margin-top:0;">✅ File Ready!</h2>
+        <h2 style="color:var(--primary); margin-top:0;">✅ File is Ready!</h2>
         <p style="font-size:14px; color:#555;">ဖိုင်ထုတ်လုပ်ခြင်း အောင်မြင်ပါသည်။ အောက်ပါခလုတ်ကိုနှိပ်၍ ဖုန်းထဲသို့ သိမ်းဆည်းပါ။</p>
-        <a id="directDownloadLink" href="#" download="" style="display:inline-block; background:#27ae60; color:white; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; margin-top:10px; font-size:16px;">💾 Download / Save File</a>
+        <a id="directDownloadLink" href="#" download="" style="display:inline-block; background:#27ae60; color:white; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; margin-top:10px; font-size:16px;">💾 Save / Download File</a>
         <br><br>
-        <button onclick="document.getElementById('downloadModal').style.display='none'" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Close</button>
+        <button onclick="document.getElementById('downloadModal').style.display='none'" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; margin-top:15px;">Close</button>
     </div>
 </div>
 
+<!-- Crop Modal -->
 <div class="modal-overlay" id="cropModal" style="z-index:99999;">
     <div class="modal-content" id="cropModalContent">
         <div style="width:100%; height:60vh; overflow:hidden; margin-bottom:15px; background:#e0e0e0; display:flex; align-items:center; justify-content:center;">
@@ -237,6 +327,7 @@
     </div>
 </div>
 
+<!-- Telegram Settings Modal -->
 <div class="modal-overlay" id="tgSettingsModal" style="z-index:999999;">
     <div class="modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); margin-bottom:15px; padding-bottom:5px;">
@@ -258,6 +349,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
 <script>
+    // =========================================================================================
+    // 🔥 FIREBASE CLOUD DATABASE CONFIGURATION 
+    // =========================================================================================
     const firebaseConfig = {
         apiKey: "YOUR_API_KEY_HERE",
         authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -281,6 +375,7 @@
         }
     } catch(e) {}
 
+    // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             let swCode = "self.addEventListener('fetch', function(event) {});";
@@ -508,7 +603,7 @@
     function openSearchModal() { document.getElementById('searchModal').style.display = 'flex'; }
     function closeSearchModal() { document.getElementById('searchModal').style.display = 'none'; }
 
-    // ✅ BLOB URL DOWNLOAD MODAL (Fixes Data-URI Crash on Android WebView)
+    // ✅ BLOB URL DOWNLOAD MODAL (APK WebView Compatibility)
     function triggerCleanBlobDownload(blob, fileName, typeText) {
         let blobUrl = URL.createObjectURL(blob);
         
