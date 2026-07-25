@@ -1545,6 +1545,1269 @@
 
 <div id="print-render-area"></div>
 
+<!-- ✅ SAFE BLOB DOWNLOAD MODAL FOR APK WEBVIEW -->
+<div class="modal-overlay" id="downloadModal" style="z-index:999999;">
+    <div class="modal-content" style="text-align:center;">
+        <h2 style="color:var(--primary); margin-top:0;">✅ File Ready!</h2>
+        <p style="font-size:14px; color:#555;">ဖိုင်ထုတ်လုပ်ခြင်း အောင်မြင်ပါသည်။ အောက်ပါခလုတ်ကိုနှိပ်၍ ဖုန်းထဲသို့ သိမ်းဆည်းပါ/မျှဝေပါ။</p>
+        <a id="directDownloadLink" href="#" download="" style="display:inline-block; background:#27ae60; color:white; padding:12px 24px; text-decoration:none; border-radius:6px; font-weight:bold; margin-top:10px; font-size:16px;">💾 Download / Save File</a>
+        <br><br>
+        <button onclick="document.getElementById('downloadModal').style.display='none'" style="background:#e74c3c; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Close</button>
+    </div>
+</div>
+
+<!-- Crop Modal -->
+<div class="modal-overlay" id="cropModal" style="z-index:99999;">
+    <div class="modal-content" id="cropModalContent">
+        <div style="width:100%; height:60vh; overflow:hidden; margin-bottom:15px; background:#e0e0e0; display:flex; align-items:center; justify-content:center;">
+            <img id="imageToCrop" src="" style="max-width:100%; max-height:100%; display:block;">
+        </div>
+        <div id="cropModalActions">
+            <button onclick="closeCropper()" style="background:#e74c3c; padding:10px 20px; color:white; border:none; border-radius:4px; font-weight:bold;">Cancel</button>
+            <button onclick="applyCrop()" style="background:#2ecc71; padding:10px 20px; color:white; border:none; border-radius:4px; font-weight:bold;">Crop & Save</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="loadJobModal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); margin-bottom:15px; padding-bottom:5px;">
+            <h2 style="margin:0; color:var(--primary);">Saved Jobs Database</h2>
+            <button onclick="closeLoadModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#333;">❌</button>
+        </div>
+        <div id="savedJobsList"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="searchModal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); margin-bottom:15px; padding-bottom:5px;">
+            <h2 style="margin:0; color:var(--primary);">Search Container</h2>
+            <button onclick="closeSearchModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#333;">❌</button>
+        </div>
+        <input type="text" id="searchInput" placeholder="Enter Container Number..." style="width: 100%; padding: 10px; font-size: 16px; margin-bottom: 15px; border: 2px solid var(--primary); border-radius: 6px; box-sizing: border-box;" oninput="performSearch()">
+        <div id="searchResults" style="max-height: 50vh; overflow-y: auto;"></div>
+    </div>
+</div>
+
+<!-- Telegram Settings Modal -->
+<div class="modal-overlay" id="tgSettingsModal" style="z-index:999999;">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); margin-bottom:15px; padding-bottom:5px;">
+            <h2 style="margin:0; color:var(--primary);">Telegram Cloud Settings</h2>
+            <button onclick="closeTelegramSettings()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#333;">❌</button>
+        </div>
+        <div class="form-group">
+            <label>Bot Token</label>
+            <input type="text" id="tg-token-input" placeholder="e.g. 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+        </div>
+        <div class="form-group" style="margin-top:10px;">
+            <label>Chat ID</label>
+            <input type="text" id="tg-chatid-input" placeholder="e.g. 123456789">
+        </div>
+        <button class="btn-small btn-save" style="margin-top:15px; width:100%; padding:10px; font-size:14px; font-weight:bold;" onclick="saveTelegramSettings()">Save Settings</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<script>
+    // =========================================================================================
+    // 🔥 FIREBASE CLOUD DATABASE CONFIGURATION 
+    // =========================================================================================
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY_HERE",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    let isFirebaseReady = false;
+    let database = null;
+
+    try {
+        if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY_HERE") {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            database = firebase.database();
+            isFirebaseReady = true;
+        }
+    } catch(e) {}
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            let swCode = "self.addEventListener('fetch', function(event) {});";
+            let blob = new Blob([swCode], {type: 'text/javascript'});
+            let swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(function(err) {});
+        });
+    }
+
+    let cropper;
+
+    function safeParseJSON(input, fallback) {
+        if (!input) return fallback;
+        if (typeof input === 'object') return input;
+        try {
+            let parsed = JSON.parse(input);
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            return parsed;
+        } catch(e) {
+            try {
+                let sanitized = input.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                let parsed2 = JSON.parse(sanitized);
+                if (typeof parsed2 === 'string') parsed2 = JSON.parse(parsed2);
+                return parsed2;
+            } catch(ex) { return fallback; }
+        }
+    }
+
+    let vgmOverrides = safeParseJSON(localStorage.getItem('sgs_vgm_overrides'), {});
+    let isVgmEditing = false;
+    let customColumns = ['SGS Seal']; 
+    let loadedCols = safeParseJSON(localStorage.getItem('sgs_custom_cols'), []);
+    if (Array.isArray(loadedCols) && loadedCols.length > 0) customColumns = loadedCols;
+
+    window.addEventListener('DOMContentLoaded', function() {
+        let selectCtn = document.getElementById('noOfCtn');
+        if(selectCtn) {
+            selectCtn.innerHTML = '';
+            for(let i=1; i<=30; i++) {
+                let opt = document.createElement('option');
+                opt.value = i; opt.text = i + " FCL";
+                selectCtn.appendChild(opt);
+            }
+        }
+        loadFromStorage();
+    });
+
+    function saveToStorage() {
+        let data = { inputs: {}, tallies: {} };
+        document.querySelectorAll('input:not(.vgm-input), textarea, select').forEach(el => {
+            if(el.id && el.type !== 'file' && el.id !== 'importBackupInput' && el.id !== 'searchInput' && !el.id.startsWith('tg-')) {
+                data.inputs[el.id] = el.value;
+            }
+        });
+        let noOfCtn = parseInt(document.getElementById('noOfCtn').value) || 1;
+        for(let i = 1; i <= noOfCtn; i++) {
+            let list = document.getElementById(`tally-list-${i}`);
+            if(list) data.tallies[i] = list.querySelectorAll('.tally-row').length;
+        }
+        let photoSrc = document.getElementById('marking-preview').src;
+        if(photoSrc && !photoSrc.endsWith("index.html") && document.getElementById('marking-preview').style.display !== 'none') {
+            data.photo = photoSrc;
+        }
+        localStorage.setItem('sgs_app_data_final', JSON.stringify(data));
+        localStorage.setItem('sgs_custom_cols', JSON.stringify(customColumns));
+    }
+
+    function loadFromStorage() {
+        let saved = localStorage.getItem('sgs_app_data_final');
+        if(!saved || saved === "undefined" || saved === '""' || saved === "{}") {
+            setTodayDate(); generateDynamicContent(); return;
+        }
+        let data = safeParseJSON(saved, { inputs: {}, tallies: {} });
+        if(data.inputs && data.inputs['noOfCtn']) {
+            let el = document.getElementById('noOfCtn');
+            if (el) { el.value = data.inputs['noOfCtn']; el.setAttribute('value', data.inputs['noOfCtn']); }
+        }
+        generateDynamicContent();
+        if(data.tallies) {
+            for(let i in data.tallies) {
+                let targetRows = data.tallies[i];
+                let list = document.getElementById(`tally-list-${i}`);
+                if(list) {
+                    let currentRows = list.querySelectorAll('.tally-row').length;
+                    for(let r = currentRows; r < targetRows; r++) { addTallyRow(i, false); }
+                }
+            }
+        }
+        if(data.inputs) {
+            for(let id in data.inputs) {
+                let el = document.getElementById(id);
+                if(el && !el.classList.contains('vgm-input') && id !== 'importBackupInput' && id !== 'searchInput' && !id.startsWith('tg-')) {
+                    el.value = data.inputs[id]; el.setAttribute('value', data.inputs[id]); 
+                }
+            }
+        }
+        if(data.photo) {
+            let previewImg = document.getElementById('marking-preview');
+            if (previewImg) { previewImg.src = data.photo; previewImg.style.display = 'block'; }
+        }
+        recalculateAll(); 
+    }
+
+    function saveJobToDB() {
+        let jobNo = document.getElementById('job-no-input').value.trim();
+        if(!jobNo) { alert("⚠️ Job No အရင်ဖြည့်ပါ"); return; }
+        saveToStorage(); 
+        let savedJobs = safeParseJSON(localStorage.getItem('sgs_saved_jobs'), {});
+        let d = new Date();
+        let dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        
+        let jobData = {
+            appData: localStorage.getItem('sgs_app_data_final') || "{}",
+            vgmData: localStorage.getItem('sgs_vgm_overrides') || "{}",
+            customCols: localStorage.getItem('sgs_custom_cols') || "[]",
+            date: dateStr
+        };
+
+        savedJobs[jobNo] = jobData;
+        localStorage.setItem('sgs_saved_jobs', JSON.stringify(savedJobs));
+
+        if (isFirebaseReady && database) {
+            database.ref('sgs_jobs/' + jobNo).set(jobData)
+            .then(() => { alert("✅ Job No: [" + jobNo + "] ကို ဖုန်းနှင့် Cloud သို့ သိမ်းဆည်းပြီးပါပြီ။"); })
+            .catch((error) => { alert("⚠️ ဖုန်းထဲတွင်သာ သိမ်းဆည်းပြီးပါပြီ။ (Cloud သို့ မရောက်သေးပါ)"); });
+        } else {
+            alert("✅ Job No: [" + jobNo + "] ကို ဖုန်းတွင်းသို့ သိမ်းဆည်းပြီးပါပြီ။");
+        }
+    }
+
+    function createNewJob() {
+        let jobNo = document.getElementById('job-no-input').value.trim();
+        if(jobNo && confirm("လက်ရှိ Job ကို Save လုပ်ပြီးမှ အသစ်တစ်ခု စတင်မှာလား?")) saveJobToDB();
+        clearFormOnly();
+        alert("Job အသစ် စတင်ရန် အဆင်သင့်ဖြစ်ပါပြီ။");
+    }
+
+    function clearFormOnly() {
+        document.querySelectorAll('input:not(.vgm-input), textarea, select').forEach(el => {
+            if(el.id && el.type !== 'file' && el.id !== 'importBackupInput' && el.id !== 'searchInput' && !el.id.startsWith('tg-')) {
+                if(el.id === 'packing-input') el.value = "IN NEW SINGLE PP BAGS";
+                else if(el.id === 'noOfCtn') el.value = "1";
+                else if(el.id === 'bagsPerCtn') el.value = "500";
+                else if(el.id === 'tareWt') el.value = "0.120";
+                else if(el.id === 'netWt') el.value = "50.000";
+                else el.value = "";
+                el.setAttribute('value', el.value);
+            }
+        });
+        document.getElementById('marking-preview').style.display = 'none';
+        document.getElementById('marking-preview').src = "";
+        vgmOverrides = {};
+        localStorage.removeItem('sgs_app_data_final');
+        localStorage.removeItem('sgs_vgm_overrides');
+        setTodayDate();
+        generateDynamicContent();
+    }
+
+    function clearAppData() { if(confirm("လက်ရှိ Form ကို ရှင်းလင်းမှာ သေချာပါသလား?")) clearFormOnly(); }
+
+    function openLoadModal() {
+        let savedJobs = safeParseJSON(localStorage.getItem('sgs_saved_jobs'), {});
+        let listContainer = document.getElementById('savedJobsList');
+        
+        if (isFirebaseReady && database) {
+            listContainer.innerHTML = '<p style="text-align:center; padding: 20px;">🔄 Cloud မှ ဒေတာများ ရှာဖွေနေပါသည်...</p>';
+            database.ref('sgs_jobs').once('value').then((snapshot) => {
+                let cloudJobs = snapshot.val() || {};
+                localStorage.setItem('sgs_saved_jobs', JSON.stringify(cloudJobs));
+                renderJobsList(cloudJobs);
+            }).catch((error) => {
+                renderJobsList(savedJobs, true);
+            });
+        } else {
+            renderJobsList(savedJobs, false);
+        }
+        document.getElementById('loadJobModal').style.display = 'flex';
+    }
+
+    function renderJobsList(savedJobs, isOfflineError = false) {
+        let listContainer = document.getElementById('savedJobsList');
+        listContainer.innerHTML = '';
+        if(isOfflineError) {
+            listContainer.insertAdjacentHTML('beforeend', '<div style="background:#f39c12; color:white; padding:5px; text-align:center; font-size:12px; margin-bottom:10px; border-radius:4px;">⚠️ Cloud သို့ချိတ်ဆက်မရသဖြင့် ဖုန်းတွင်းရှိ ဒေတာများကိုသာ ပြသထားပါသည်။</div>');
+        }
+        let jobKeys = Object.keys(savedJobs);
+        if(jobKeys.length === 0) listContainer.innerHTML = '<p style="text-align:center; padding: 20px;">Saved Jobs မရှိသေးပါ။</p>';
+        else {
+            jobKeys.reverse().forEach(key => { 
+                listContainer.insertAdjacentHTML('beforeend', `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:6px;">
+                        <div><b>${key}</b><br><small>${savedJobs[key].date}</small></div>
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn-small" style="background:#3498db;" onclick="loadJobFromDB('${key}')">📂 Load</button>
+                            <button class="btn-small btn-delete" onclick="deleteJobFromDB('${key}')">🗑️</button>
+                        </div>
+                    </div>`);
+            });
+        }
+    }
+
+    function loadJobFromDB(jobNo) {
+        if(confirm("[" + jobNo + "] ကို ဖွင့်မှာ သေချာပါသလား?")) {
+            let savedJobs = safeParseJSON(localStorage.getItem('sgs_saved_jobs'), {});
+            if(savedJobs[jobNo]) {
+                localStorage.setItem('sgs_app_data_final', savedJobs[jobNo].appData || "{}");
+                localStorage.setItem('sgs_vgm_overrides', savedJobs[jobNo].vgmData || "{}");
+                localStorage.setItem('sgs_custom_cols', savedJobs[jobNo].customCols || "[]");
+                location.reload(); 
+            }
+        }
+    }
+
+    function deleteJobFromDB(jobNo) {
+        if(confirm("Delete Job [" + jobNo + "]?")) {
+            let savedJobs = safeParseJSON(localStorage.getItem('sgs_saved_jobs'), {});
+            delete savedJobs[jobNo];
+            localStorage.setItem('sgs_saved_jobs', JSON.stringify(savedJobs));
+            if (isFirebaseReady && database) { database.ref('sgs_jobs/' + jobNo).remove().catch(()=>{}); }
+            openLoadModal();
+        }
+    }
+
+    function closeLoadModal() { document.getElementById('loadJobModal').style.display = 'none'; }
+    function openSearchModal() { document.getElementById('searchModal').style.display = 'flex'; }
+    function closeSearchModal() { document.getElementById('searchModal').style.display = 'none'; }
+
+    // ✅ BLOB URL DOWNLOAD MODAL (Fixes Data-URI Crash on Android WebView)
+    function triggerCleanBlobDownload(blob, fileName, typeText) {
+        let blobUrl = URL.createObjectURL(blob);
+        
+        // 1. Try Direct Automatic Download First
+        let a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // 2. Also prepare the Modal Fallback in case Auto-download is blocked
+        let modalLink = document.getElementById('directDownloadLink');
+        modalLink.href = blobUrl;
+        modalLink.download = fileName;
+        modalLink.innerHTML = `💾 Download ${typeText}`;
+        document.getElementById('downloadModal').style.display = 'flex';
+    }
+
+    function exportBackupFile() {
+        saveToStorage(); 
+        let d = new Date();
+        let defaultName = `SGS_Backup_${String(d.getDate()).padStart(2,'0')}_${String(d.getMonth()+1).padStart(2,'0')}_${d.getFullYear()}`;
+        let fileName = prompt("Backup ဖိုင်အမည်:", defaultName);
+        if(!fileName) return;
+        if (!fileName.toLowerCase().endsWith('.json')) fileName += ".json";
+        
+        let fullData = {
+            sgs_version: "8.5",
+            sgs_app_data_final: localStorage.getItem('sgs_app_data_final') || "{}",
+            sgs_vgm_overrides: localStorage.getItem('sgs_vgm_overrides') || "{}",
+            sgs_custom_cols: localStorage.getItem('sgs_custom_cols') || "[]",
+            sgs_saved_jobs: localStorage.getItem('sgs_saved_jobs') || "{}"
+        };
+        
+        let jsonString = JSON.stringify(fullData, null, 2);
+        let blob = new Blob([jsonString], {type: "application/json"});
+        triggerCleanBlobDownload(blob, fileName, "Backup JSON");
+    }
+
+    function importBackupFile(event) {
+        let file = event.target.files[0]; if(!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let data = JSON.parse(e.target.result);
+                if (typeof data === 'string') data = JSON.parse(data);
+                localStorage.setItem('sgs_app_data_final', typeof data.sgs_app_data_final === 'object' ? JSON.stringify(data.sgs_app_data_final) : (data.sgs_app_data_final || "{}"));
+                localStorage.setItem('sgs_vgm_overrides', typeof data.sgs_vgm_overrides === 'object' ? JSON.stringify(data.sgs_vgm_overrides) : (data.sgs_vgm_overrides || "{}"));
+                localStorage.setItem('sgs_custom_cols', typeof data.sgs_custom_cols === 'object' ? JSON.stringify(data.sgs_custom_cols) : (data.sgs_custom_cols || "[]"));
+                localStorage.setItem('sgs_saved_jobs', typeof data.sgs_saved_jobs === 'object' ? JSON.stringify(data.sgs_saved_jobs) : (data.sgs_saved_jobs || "{}"));
+                alert("✅ Restore ပြီးပါပြီ"); window.location.reload();
+            } catch(err) { alert("❌ ဖိုင်မှားယွင်းနေပါသည်"); }
+        };
+        reader.readAsText(file);
+        event.target.value = ""; 
+    }
+
+    function openTelegramSettings() {
+        try {
+            let tk = localStorage.getItem('sgs_tg_token') || "";
+            let id = localStorage.getItem('sgs_tg_chat_id') || "";
+            document.getElementById('tg-token-input').value = tk;
+            document.getElementById('tg-chatid-input').value = id;
+            document.getElementById('tgSettingsModal').style.display = 'flex';
+        } catch (e) { alert("Error: " + e.message); }
+    }
+
+    function closeTelegramSettings() {
+        document.getElementById('tgSettingsModal').style.display = 'none';
+    }
+
+    function saveTelegramSettings() {
+        let token = document.getElementById('tg-token-input').value.trim();
+        let chatId = document.getElementById('tg-chatid-input').value.trim();
+        localStorage.setItem('sgs_tg_token', token);
+        localStorage.setItem('sgs_tg_chat_id', chatId);
+        alert("✅ Telegram Settings များ မှတ်သားပြီးပါပြီ။");
+        closeTelegramSettings();
+    }
+
+    function syncToTelegramCloud() {
+        let tgToken = localStorage.getItem('sgs_tg_token');
+        let tgChatId = localStorage.getItem('sgs_tg_chat_id');
+        
+        if (!tgToken || !tgChatId) {
+            alert("⚠️ ကျေးဇူးပြု၍ ⚙️ Settings ခလုတ်ကို နှိပ်ပြီး Telegram Bot Token နှင့် Chat ID အရင်ထည့်သွင်းပေးပါခင်ဗျာ။");
+            openTelegramSettings();
+            return;
+        }
+
+        saveToStorage(); 
+        let jobNo = document.getElementById('job-no-input').value.trim();
+        if(!jobNo) { alert("Job No အရင်ဖြည့်ပါ"); return; }
+        
+        let btn = document.getElementById('btn-sync-cloud'); 
+        let oldText = btn.innerHTML; 
+        btn.innerHTML = "⏳";
+
+        let backupObj = {
+            sgs_version: "8.6_TelegramCloud_Dynamic",
+            sgs_app_data_final: safeParseJSON(localStorage.getItem('sgs_app_data_final'), {}),
+            sgs_vgm_overrides: safeParseJSON(localStorage.getItem('sgs_vgm_overrides'), {}),
+            sgs_custom_cols: safeParseJSON(localStorage.getItem('sgs_custom_cols'), []),
+            sgs_saved_jobs: safeParseJSON(localStorage.getItem('sgs_saved_jobs'), {})
+        };
+        let fileBlob = new Blob([JSON.stringify(backupObj, null, 2)], {type: "application/json"});
+        
+        let dateVal = document.getElementById('job-date-actual').value || '-';
+        if (dateVal.includes('-')) { let p = dateVal.split('-'); dateVal = `${p[2]}/${p[1]}/${p[0]}`; }
+        let shipperVal = document.getElementById('shipper-input').value || '-';
+        let totalBagsVal = document.getElementById('gs-shipped-bags').innerText || '0';
+        let grandTotalMtsVal = document.getElementById('gs-grand-total-mts').innerText || '0.000';
+
+        let textCaption = `☁️ *SGS CLOUD BACKUP DIGEST*\n\n• *Job Number:* ${jobNo}\n• *Date:* ${dateVal}\n• *Shipper:*${shipperVal}\n• *Total Bags:* ${totalBagsVal} Bags\n• *Grand Total Weight:*${grandTotalMtsVal} MTS\n\nStatus: ✅ Direct Secure Structural Database File Attached.`;
+
+        let formData = new FormData(); 
+        formData.append("chat_id", tgChatId); 
+        formData.append("document", fileBlob, `SGS_Backup_${jobNo}.json`);
+        formData.append("caption", textCaption);
+        formData.append("parse_mode", "Markdown");
+
+        fetch(`https://api.telegram.org/bot${tgToken}/sendDocument`, { method: "POST", body: formData })
+        .then(res => res.json()).then(response => { 
+            btn.innerHTML = oldText;
+            if(response.ok) alert("✅ Cloud Sync အောင်မြင်ပါသည်"); 
+            else alert("❌ Error: " + response.description); 
+        })
+        .catch(err => {
+            btn.innerHTML = oldText;
+            alert("❌ Cloud Sync ကျရှုံးပါသည်");
+        });
+    }
+
+    function performSearch() {
+        let query = document.getElementById('searchInput').value.toLowerCase().trim();
+        let listContainer = document.getElementById('searchResults'); listContainer.innerHTML = ''; if(!query) return;
+        let savedJobs = safeParseJSON(localStorage.getItem('sgs_saved_jobs'), {});
+        Object.keys(savedJobs).forEach(jobNo => {
+            let inputs = safeParseJSON(savedJobs[jobNo].appData, {}).inputs || {};
+            for(let i=1; i<=30; i++) {
+                let ctnNo = (inputs[`ctn-no-input-${i}`] || '').toLowerCase();
+                if(ctnNo && ctnNo.includes(query)) {
+                    listContainer.insertAdjacentHTML('beforeend', `<div style="background:#f9f9f9; padding:10px; margin-bottom:5px; border:1px solid #ddd; border-radius:6px;"><b>Container: ${ctnNo.toUpperCase()}</b> (Job: ${jobNo})<br><button class="btn-small" style="background:#3498db; margin-top:5px; width:100\%;" onclick="loadJobFromDB('${jobNo}')">Open Job</button></div>`);
+                }
+            }
+        });
+    }
+
+    function openTab(tabName) {
+        document.querySelectorAll(".tab-content").forEach(t => t.style.display = "none");
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.getElementById(tabName).style.display = "block";
+        document.getElementById("btn-" + tabName).classList.add("active");
+    }
+
+    function addCtnColumn() {
+        let name = prompt("Enter Column Name:");
+        if(name) { customColumns.push(name.trim()); saveToStorage(); generateDynamicContent(); }
+    }
+
+    function removeCtnColumn(idx) {
+        let colName = customColumns[idx];
+        if(!confirm(`'${colName}' ကော်လံကို ဖျက်မှာ သေချာပါသလား?`)) return;
+        saveToStorage(); 
+        let data = safeParseJSON(localStorage.getItem('sgs_app_data_final'), {inputs: {}, tallies: {}});
+        let noOfCtn = parseInt(data.inputs['noOfCtn']) || 1;
+        for(let i = 1; i <= noOfCtn; i++) {
+            for(let j = idx; j < customColumns.length; j++) {
+                data.inputs[`ctn-dyn-${i}-${j}`] = data.inputs[`ctn-dyn-${i}-${j+1}`] || '';
+            }
+            delete data.inputs[`ctn-dyn-${i}-${customColumns.length}`];
+        }
+        let overrides = safeParseJSON(localStorage.getItem('sgs_vgm_overrides'), {});
+        for(let i = 1; i <= noOfCtn; i++) {
+            if(overrides[i] && overrides[i][colName] !== undefined) delete overrides[i][colName];
+        }
+        customColumns.splice(idx, 1);
+        localStorage.setItem('sgs_custom_cols', JSON.stringify(customColumns));
+        localStorage.setItem('sgs_vgm_overrides', JSON.stringify(overrides));
+        localStorage.setItem('sgs_app_data_final', JSON.stringify(data));
+        loadFromStorage(); 
+    }
+
+    function deleteCtnRow(index) {
+        let select = document.getElementById('noOfCtn'); 
+        let noOfCtn = parseInt(select.value) || 1;
+        if(noOfCtn <= 1) { alert("အနည်းဆုံး ကွန်တိန်နာ (၁) လုံး ရှိရပါမည်။"); return; }
+        if(confirm(`Container ${index} ကို ဖျက်မှာ သေချာပါသလား?`)) { 
+            saveToStorage();
+            let data = safeParseJSON(localStorage.getItem('sgs_app_data_final'), { inputs: {}, tallies: {} });
+            let suffixes = ['ctn-truck-', 'ctn-no-input-', 'ctn-color-', 'ctn-tare-', 'ctn-bagcount-', 'ctn-com-', 'ctn-comp-', 'ctn-grossmt-', 'ctn-taremt-', 'ctn-seal-', 'ctn-key-', 'ctn-tallystr-', 'ctn-addrem-'];
+            for(let i = index; i < noOfCtn; i++) {
+                let nextI = i + 1;
+                suffixes.forEach(s => { data.inputs[s + i] = data.inputs[s + nextI] || ''; });
+                customColumns.forEach((_, colIdx) => { data.inputs[`ctn-dyn-${i}-${colIdx}`] = data.inputs[`ctn-dyn-${nextI}-${colIdx}`] || ''; });
+                data.tallies[i] = data.tallies[nextI] || 1;
+                for(let j=0; j<20; j++) { 
+                    if(data.inputs[`tally-wt-${nextI}-${j}`] !== undefined) {
+                        data.inputs[`tally-wt-${i}-${j}`] = data.inputs[`tally-wt-${nextI}-${j}`]; 
+                        data.inputs[`tally-cnt-${i}-${j}`] = data.inputs[`tally-cnt-${nextI}-${j}`];
+                    } else { 
+                        delete data.inputs[`tally-wt-${i}-${j}`]; 
+                        delete data.inputs[`tally-cnt-${i}-${j}`]; 
+                    }
+                }
+            }
+            suffixes.forEach(s => delete data.inputs[s + noOfCtn]); 
+            customColumns.forEach((_, colIdx) => delete data.inputs[`ctn-dyn-${noOfCtn}-${colIdx}`]);
+            delete data.tallies[noOfCtn]; delete vgmOverrides[noOfCtn]; 
+            noOfCtn--; data.inputs['noOfCtn'] = noOfCtn; select.value = noOfCtn;
+            localStorage.setItem('sgs_app_data_final', JSON.stringify(data)); 
+            localStorage.setItem('sgs_vgm_overrides', JSON.stringify(vgmOverrides));
+            loadFromStorage();
+        }
+    }
+
+    function addTallyRow(ctnIndex, save = true) {
+        let list = document.getElementById(`tally-list-${ctnIndex}`); if(!list) return;
+        let rowCount = list.children.length;
+        let rowHTML = `<div class="tally-row">
+            <input type="number" step="0.001" placeholder="Wt(Kg)" id="tally-wt-${ctnIndex}-${rowCount}" class="wt-input" oninput="updateContainer(${ctnIndex})">
+            <button class="btn-small btn-minus" onclick="adjustCount(this, -1, ${ctnIndex})">-</button>
+            <input type="number" value="0" id="tally-cnt-${ctnIndex}-${rowCount}" class="count-input" oninput="updateContainer(${ctnIndex})">
+            <button class="btn-small btn-plus" onclick="adjustCount(this, 1, ${ctnIndex})">+</button>
+            <button class="btn-small btn-delete" onclick="this.parentElement.remove(); updateContainer(${ctnIndex}); saveToStorage();">x</button>
+        </div>`;
+        list.insertAdjacentHTML('beforeend', rowHTML);
+        if(save) saveToStorage();
+    }
+
+    function updateVGM() {
+        let vgmArea = document.getElementById('vgmDetailsArea'); if (!vgmArea) return;
+        let noOfCtn = parseInt(document.getElementById('noOfCtn').value) || 1;
+        
+        let html = `<div class="card" style="overflow-x: auto;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h2>VGM SUMMARY</h2><button class="btn-small ${isVgmEditing ? 'btn-save' : 'btn-edit'}" onclick="toggleVgmEdit()">${isVgmEditing ? '💾 Save' : '✏️ Edit'}</button></div><table class="print-table" id="vgm-table" style="width:100\%;"><thead><tr><th>Sr.</th><th>Container No</th><th>Bags</th><th>Avg Wt</th><th>Cargo Wt</th>${customColumns.map(c => `<th>${c}</th>`).join('')}<th>Add Wt</th><th>Tare</th><th style="background:#2C5E43; color:white;">Total</th></tr></thead><tbody>`;
+        
+        for (let i = 1; i <= noOfCtn; i++) {
+            let ctnNo = document.getElementById(`ctn-no-input-${i}`)?.value || '-';
+            let bags = parseFloat(document.getElementById(`ctn-bagcount-${i}`)?.value) || (parseFloat(document.getElementById(`ctn-bags-${i}`)?.innerText) || 0);
+            let avgWt = parseFloat(document.getElementById(`ctn-avg-gross-${i}`)?.innerText) || 0;
+            let cargoWt = bags * avgWt;
+            
+            let addsSum = 0;
+            let ctnOverrides = vgmOverrides[i] || {};
+            
+            let dynCells = customColumns.map((col, idx) => {
+                let val = ctnOverrides[col] !== undefined ? ctnOverrides[col] : (document.getElementById(`ctn-dyn-${i}-${idx}`)?.value || '');
+                addsSum += parseFloat(val) || 0;
+                return isVgmEditing ? `<td><input type="text" class="vgm-input" value="${val}" oninput="handleVgmInput(${i}, '${col}', this.value)" style="width:60px;"></td>` : `<td>${val}</td>`;
+            }).join('');
+            
+            let addVal = ctnOverrides['Add'] !== undefined ? ctnOverrides['Add'] : (document.getElementById(`ctn-addrem-${i}`)?.value || '');
+            addsSum += parseFloat(addVal) || 0;
+            
+            let tareVal = ctnOverrides['Tare'] !== undefined ? ctnOverrides['Tare'] : (document.getElementById(`ctn-tare-${i}`)?.value || '');
+            let total = cargoWt + addsSum + (parseFloat(tareVal) || 0);
+            
+            html += `<tr><td>${i}</td><td><b>${ctnNo}</b></td><td>${bags}</td><td>${avgWt.toFixed(3)}</td><td>${cargoWt.toFixed(3)}</td>${dynCells}<td>${isVgmEditing ? `<input type="text" value="${addVal}" oninput="handleVgmInput(${i}, 'Add', this.value)" style="width:60px;">` : addVal}</td><td>${isVgmEditing ? `<input type="text" value="${tareVal}" oninput="handleVgmInput(${i}, 'Tare', this.value)" style="width:60px;">` : tareVal}</td><td style="font-weight:bold;" id="vgm-tot-${i}">${total.toFixed(3)}</td></tr>`;
+        }
+        vgmArea.innerHTML = html + "</tbody></table></div>";
+    }
+
+    function generateDynamicContent() {
+        let noOfCtn = parseInt(document.getElementById('noOfCtn').value) || 1;
+        let detailsArea = document.getElementById('containerDetailsArea');
+        let weightArea = document.getElementById('weightTallyArea');
+        let ctnTableHTML = `<div class="card"><div class="header-with-action"><h2>Container Details</h2><button class="btn-add-col" onclick="addCtnColumn()">➕ Add Column</button></div><div style="overflow-x:auto;"><table class="ctn-table" id="ctnDetailsMasterTable"><thead><tr>
+            <th style="min-width: 40px;">No.</th>
+            <th style="min-width: 120px;">Truck</th>
+            <th style="min-width: 150px;">CTN No.</th>
+            <th style="min-width: 80px;">Color</th>
+            <th style="min-width: 90px;">Tare</th>
+            <th style="min-width: 80px;">Bags</th>
+            <th style="min-width: 100px;">Comm</th>
+            <th style="min-width: 100px;">Comp</th>
+            <th style="min-width: 90px;">G.MT</th>
+            <th style="min-width: 90px;">T.MT</th>
+            <th style="min-width: 120px;">Seal</th>
+            <th style="min-width: 80px;">Tally</th>
+            <th style="min-width: 80px;">Key</th>
+            <th style="min-width: 90px;">ADD</th>
+            ${customColumns.map((c, idx) => `<th style="min-width: 100px;">${c}<br><small onclick="removeCtnColumn(${idx})" style="color:red; cursor:pointer;">x</small></th>`).join('')}
+            <th style="min-width: 40px;" class="exclude-export">🗑️</th>
+        </tr></thead><tbody>`;
+        
+        weightArea.innerHTML = ''; 
+        for (let i = 1; i <= noOfCtn; i++) {
+            let currentData = safeParseJSON(localStorage.getItem('sgs_app_data_final'), {inputs:{}});
+            let currentCtn = currentData.inputs[`ctn-no-input-${i}`] || '';
+            let titleStr = currentCtn ? `Container ${i} (${currentCtn})` : `Container ${i}`;
+
+            ctnTableHTML += `<tr>
+                <td style="text-align: center;">${i}</td>
+                <td><input type="text" id="ctn-truck-${i}" style="min-width: 110px;" oninput="saveToStorage()"></td>
+                <td><input type="text" id="ctn-no-input-${i}" style="font-weight:bold; min-width: 140px;" oninput="updateCtnTitle(${i}); updateVGM(); saveToStorage();"></td>
+                <td><input type="text" id="ctn-color-${i}" style="min-width: 70px;" oninput="saveToStorage()"></td>
+                <td><input type="number" step="0.001" id="ctn-tare-${i}" style="min-width: 80px;" oninput="updateVGM(); saveToStorage();"></td>
+                <td><input type="number" id="ctn-bagcount-${i}" style="min-width: 70px;" oninput="updateVGM(); saveToStorage();"></td>
+                <td><input type="time" id="ctn-com-${i}" style="min-width: 90px;" oninput="saveToStorage()"></td>
+                <td><input type="time" id="ctn-comp-${i}" style="min-width: 90px;" oninput="saveToStorage()"></td>
+                <td><input type="number" step="0.001" id="ctn-grossmt-${i}" style="min-width: 80px;" oninput="saveToStorage()"></td>
+                <td><input type="number" step="0.001" id="ctn-taremt-${i}" style="min-width: 80px;" oninput="saveToStorage()"></td>
+                <td><input type="text" id="ctn-seal-${i}" style="min-width: 110px;" oninput="saveToStorage()"></td>
+                <td><input type="text" id="ctn-tallystr-${i}" style="min-width: 70px;" oninput="saveToStorage()"></td>
+                <td><input type="text" id="ctn-key-${i}" style="min-width: 70px;" oninput="saveToStorage()"></td>
+                <td><input type="number" step="0.001" id="ctn-addrem-${i}" style="min-width: 80px;" oninput="updateVGM(); calculateGrand(); saveToStorage();"></td>
+                ${customColumns.map((c, idx) => `<td><input type="text" id="ctn-dyn-${i}-${idx}" style="min-width: 90px;" oninput="updateVGM(); saveToStorage();"></td>`).join('')}
+                <td style="text-align:center;" class="exclude-export"><button onclick="deleteCtnRow(${i})" style="border:none; border-radius:4px; padding:4px 8px; background:#e74c3c; color:white; cursor:pointer;">x</button></td>
+            </tr>`;
+
+            weightArea.insertAdjacentHTML('beforeend', `<div class="card"><h3 id="ctn-tally-title-${i}">${titleStr}</h3><div class="form-group"><label>Tally Percentage (\%)</label><select id="ctn-percent-${i}" oninput="this.setAttribute('value', this.value); saveToStorage()"><option value="10">10%</option><option value="20">20%</option><option value="100">100%</option></select></div><div id="tally-list-${i}"><div class="tally-row"><input type="number" step="0.001" placeholder="Wt(Kg)" id="tally-wt-${i}-0" class="wt-input" oninput="updateContainer(${i})"><button class="btn-small btn-minus" onclick="adjustCount(this, -1, ${i})">-</button><input type="number" value="0" id="tally-cnt-${i}-0" class="count-input" oninput="updateContainer(${i})"><button class="btn-small btn-plus" onclick="adjustCount(this, 1, ${i})">+</button></div></div><button class="btn-small" style="background:#555;" onclick="addTallyRow(${i})">+ Add Wt Group</button><div class="summary-box"><div class="summary-item">Bags: <strong id="ctn-bags-${i}">0</strong></div><div class="summary-item">Total: <strong id="gs-gross-placeholder-${i}">0.000</strong></div><div class="summary-item">Avg: <strong id="ctn-avg-gross-${i}">0.000</strong></div><div class="summary-item">Full Wt: <strong id="ctn-full-${i}">0.000</strong></div><div class="summary-item" style="color:var(--primary);">Add. Kgs: <strong id="ctn-additional-${i}">0.000</strong></div></div></div>`);
+        }
+        detailsArea.innerHTML = ctnTableHTML + "</tbody></table></div></div>";
+    }
+
+    function trunc3(num) { 
+        if (isNaN(num) || !isFinite(num)) return 0.000;
+        let cleanNum = Number(num.toPrecision(14)); 
+        return Math.trunc(cleanNum * 1000) / 1000;
+    }
+
+    function recalculateAll() { 
+        calculateGrand(); 
+        let noOfCtn = parseInt(document.getElementById('noOfCtn').value) || 1; 
+        for(let i=1; i<=noOfCtn; i++) {
+            updateCtnTitle(i);
+            updateContainer(i); 
+        }
+        updateVGM(); 
+    }
+
+    function handleCtnChange() { generateDynamicContent(); saveToStorage(); loadFromStorage(); }
+    
+    function updateCtnTitle(i) { 
+        let inp = document.getElementById(`ctn-no-input-${i}`);
+        let v = inp ? inp.value.trim() : ''; 
+        let t = document.getElementById(`ctn-tally-title-${i}`); 
+        if(t) t.innerText = v ? `Container ${i} (${v})` : `Container ${i}`; 
+    }
+
+    function setTodayDate() { let d = new Date(); document.getElementById('job-date-actual').value = d.toISOString().split('T')[0]; }
+    function adjustCount(btn, amount, ctnIndex) { let inp = btn.parentElement.querySelector('.count-input'); inp.value = Math.max(0, (parseInt(inp.value) || 0) + amount); updateContainer(ctnIndex); }
+    function handleVgmInput(i, field, val) { if(!vgmOverrides[i]) vgmOverrides[i] = {}; vgmOverrides[i][field] = val; updateVGM(); }
+    function toggleVgmEdit() { isVgmEditing = !isVgmEditing; if(!isVgmEditing) { localStorage.setItem('sgs_vgm_overrides', JSON.stringify(vgmOverrides)); calculateGrand(); } updateVGM(); }
+
+    function updateContainer(ctnIndex) {
+        let list = document.getElementById(`tally-list-${ctnIndex}`); if (!list) return;
+        let wts = list.querySelectorAll('.wt-input'); let cnts = list.querySelectorAll('.count-input');
+        let totalBags = 0; let totalGross = 0;
+        for (let j = 0; j < wts.length; j++) {
+            let w = parseFloat(wts[j].value) || 0; let c = parseInt(cnts[j].value) || 0;
+            totalBags += c; totalGross += (w * c);
+        }
+        
+        let bagsPerCtn = parseInt(document.getElementById('bagsPerCtn').value) || 0;
+        let tareWt = parseFloat(document.getElementById('tareWt').value) || 0;
+        let netWt = parseFloat(document.getElementById('netWt').value) || 50;
+        
+        let targetGross = trunc3(netWt + tareWt);
+        let fullWeight = trunc3(targetGross * bagsPerCtn);
+        let avgGross = totalBags > 0 ? trunc3(totalGross / totalBags) : 0;
+        let calcAdditional = trunc3(fullWeight - (avgGross * bagsPerCtn));
+        
+        let bagsEl = document.getElementById(`ctn-bags-${ctnIndex}`); if(bagsEl) bagsEl.innerText = totalBags;
+        let targetPl = document.getElementById(`gs-gross-placeholder-${ctnIndex}`); if(targetPl) targetPl.innerText = trunc3(totalGross).toFixed(3);
+        let avgEl = document.getElementById(`ctn-avg-gross-${ctnIndex}`); if(avgEl) avgEl.innerText = avgGross.toFixed(3);
+        let fullEl = document.getElementById(`ctn-full-${ctnIndex}`); if(fullEl) fullEl.innerText = fullWeight.toFixed(3);
+        let addEl = document.getElementById(`ctn-additional-${ctnIndex}`); if(addEl) addEl.innerText = calcAdditional.toFixed(3);
+        
+        calculateGrand(); updateVGM(); 
+    }
+
+    function calculateGrand() {
+        try {
+            let noOfCtn = parseInt(document.getElementById('noOfCtn').value) || 1;
+            let bagsPerCtn = parseInt(document.getElementById('bagsPerCtn').value) || 0;
+            let tareWt = parseFloat(document.getElementById('tareWt').value) || 0;
+            let netWt = parseFloat(document.getElementById('netWt').value) || 0;
+            
+            let grossWt = trunc3(netWt + tareWt);
+            let totalShippedBags = noOfCtn * bagsPerCtn;
+            
+            document.getElementById('grossWt').value = grossWt.toFixed(3);
+            document.getElementById('totalShippedBagsSetup').value = totalShippedBags;
+            document.getElementById('totalBagsWeight').value = trunc3(totalShippedBags * grossWt).toFixed(3);
+            
+            let sumGross = 0; let totalTallyBags = 0;
+            for (let i = 1; i <= noOfCtn; i++) {
+                sumGross += parseFloat(document.getElementById(`gs-gross-placeholder-${i}`)?.innerText || 0);
+                totalTallyBags += parseInt(document.getElementById(`ctn-bags-${i}`)?.innerText || 0);
+            }
+            
+            let avgGross = totalTallyBags > 0 ? trunc3(sumGross / totalTallyBags) : 0;
+            let avgNet = Math.max(0, trunc3(avgGross - tareWt));
+            let totalNet = trunc3(avgNet * totalShippedBags);
+            
+            let grandAdd = 0;
+            for (let i = 1; i <= noOfCtn; i++) {
+                let manualVal = document.getElementById(`ctn-addrem-${i}`)?.value || '';
+                if (vgmOverrides[i] && vgmOverrides[i]['Add'] !== undefined) manualVal = vgmOverrides[i]['Add'];
+                else if (vgmOverrides[i] && vgmOverrides[i]['Additional Kgs'] !== undefined) manualVal = vgmOverrides[i]['Additional Kgs'];
+                grandAdd += parseFloat(manualVal) || 0;
+            }
+            let truncGrandAdditional = trunc3(grandAdd);
+
+            document.getElementById('gs-shipped-bags').innerText = totalShippedBags;
+            document.getElementById('gs-total-gross').innerText = trunc3(sumGross).toFixed(3);
+            document.getElementById('gs-avg-gross').innerText = avgGross.toFixed(3);
+            document.getElementById('gs-avg-net').innerText = avgNet.toFixed(3);
+            document.getElementById('gs-shipped-kgs').innerText = totalNet.toFixed(3);
+            document.getElementById('gs-additional').innerText = truncGrandAdditional.toFixed(3);
+            document.getElementById('gs-grand-total').innerText = trunc3(totalNet + truncGrandAdditional).toFixed(3);
+            document.getElementById('gs-grand-total-mts').innerText = trunc3((totalNet + truncGrandAdditional) / 1000).toFixed(3);
+        } catch(e) {}
+    }
+
+    function openCropper(e) {
+        let f = e.target.files[0];
+        if (f) {
+            let r = new FileReader();
+            r.onload = function(ev) {
+                let img = document.getElementById('imageToCrop');
+                img.src = ev.target.result;
+                document.getElementById('cropModal').style.display = 'flex';
+                setTimeout(() => {
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(img, { viewMode: 1, autoCropArea: 0.8 });
+                }, 150);
+            };
+            r.readAsDataURL(f);
+        }
+        e.target.value = ""; 
+    }
+
+    function closeCropper() {
+        document.getElementById('cropModal').style.display = 'none';
+        if (cropper) { cropper.destroy(); cropper = null; }
+    }
+
+    function applyCrop() {
+        if (!cropper) return;
+        let c = cropper.getCroppedCanvas({ maxWidth: 1000, maxHeight: 1000 });
+        if (c) {
+            document.getElementById('marking-preview').src = c.toDataURL('image/jpeg', 0.8);
+            document.getElementById('marking-preview').style.display = 'block';
+            closeCropper();
+            saveToStorage();
+        } else {
+            alert("ပုံဖြတ်ရာတွင် အမှားအယွင်းရှိပါသည်။");
+        }
+    }
+
+    // ✅ APK (WEBVIEW) မပျက်ဘဲ ဒေါင်းလုဒ် အဆင်ပြေစေမည့် Clean Blob PDF Export
+    function exportToDirectPDF() {
+        let defaultName = document.getElementById('job-no-input').value || "SGS_Report";
+        let fileName = prompt("PDF ဖိုင်အမည်ကို ရိုက်ထည့်ပါ:", defaultName);
+        if (!fileName) return; 
+        if (!fileName.toLowerCase().endsWith('.pdf')) fileName += ".pdf";
+
+        let btn = document.getElementById('btn-pdf-export');
+        let oldText = btn.innerHTML;
+        btn.innerHTML = "⏳";
+        document.getElementById('app-container').style.display = 'none';
+
+        let dateVal = document.getElementById('job-date-actual').value || '';
+        if (dateVal.includes('-')) {
+            let p = dateVal.split('-'); dateVal = `${p[2]}/${p[1]}/${p[0]}`;
+        }
+        
+        let photoSrc = document.getElementById('marking-preview').src;
+        let markingText = document.getElementById('marking-input').value || '';
+        let photoHTML = '';
+        if ((photoSrc && photoSrc !== "" && !photoSrc.endsWith("index.html") && document.getElementById('marking-preview').style.display !== 'none') || markingText !== '') {
+            photoHTML = `
+            <div style="page-break-inside: avoid;">
+                <h4 style="background:#f2f2f2; padding:6px; border:1px solid #444; margin:15px 0 5px 0;">MARKING & PHOTO</h4>
+                <div style="text-align:center; padding: 15px; border:1px solid #444;">
+                    ${markingText ? `<div style="font-weight:bold; font-size:14px; margin-bottom:10px;">${markingText}</div>` : ''}
+                    ${photoSrc && photoSrc !== "" && !photoSrc.endsWith("index.html") && document.getElementById('marking-preview').style.display !== 'none' ? `<img src="${photoSrc}" style="max-width:400px; max-height:400px; object-fit:contain; border: 1px solid #ccc;">` : ''}
+                </div>
+            </div>`;
+        }
+
+        let html = `
+            <div style="font-family:Arial; padding:15px; width:1100px; color:#000;">
+                <h2 style="text-align:center; color:#2C5E43; margin-bottom:10px;">SGS SURVEYOR NOTES</h2>
+                <p style="text-align:center; margin:5px 0; font-weight:bold;">Job No: ${document.getElementById('job-no-input').value} \vert{} Date:${dateVal}</p>
+                
+                <h4 style="background:#f2f2f2; padding:6px; border:1px solid #444; margin:10px 0 5px 0;">JOB DETAILS</h4>
+                <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                    ${Array.from(document.querySelectorAll('#jobDetailsTable tr')).map(tr => `<tr><th style="border:1px solid #444; padding:5px; text-align:left; width:35%;">${tr.cells[0].innerText}</th><td style="border:1px solid #444; padding:5px;">${tr.cells[1].querySelector('input')?.value || ''}</td></tr>`).join('')}
+                </table>
+                
+                <h4 style="background:#f2f2f2; padding:6px; border:1px solid #444; margin:15px 0 5px 0;">CONTAINER DETAILS</h4>
+                <div style="width:100%;">
+                    <table style="width:100%; border-collapse:collapse; font-size:9px; table-layout:fixed; word-wrap:break-word;">
+                        ${document.getElementById('ctnDetailsMasterTable').innerHTML}
+                    </table>
+                </div>
+
+                <h4 style="background:#f2f2f2; padding:6px; border:1px solid #444; margin:15px 0 5px 0;">VGM SUMMARY</h4>
+                <div style="width:100%;">
+                    <table style="width:100%; border-collapse:collapse; font-size:9px; table-layout:fixed; word-wrap:break-word;">
+                        ${document.getElementById('vgm-table') ? document.getElementById('vgm-table').innerHTML : ''}
+                    </table>
+                </div>
+
+                <h4 style="background:#2C5E43; color:white; padding:6px; border:1px solid #444; margin:15px 0 5px 0;">GRAND SUMMARY</h4>
+                <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                    ${Array.from(document.querySelectorAll('.grand-summary .summary-item')).map(item => `<tr><th style="border:1px solid #444; padding:6px; text-align:left; background:#f9f9f9; width:50%;">${item.querySelector('span').innerText}</th><td style="border:1px solid #444; padding:6px; font-weight:bold; width:50%;">${item.querySelector('strong').innerText}</td></tr>`).join('')}
+                </table>
+
+                <div style="margin-top:20px; border:1px solid #444; padding:10px; background:#f9f9f9; font-size:11px;">
+                    <b>Remark:</b><br>${document.getElementById('job-remark').value.replace(/\n/g, '<br>')}
+                </div>
+                ${photoHTML}
+            </div>`;
+
+        let renderArea = document.getElementById('print-render-area'); 
+        renderArea.innerHTML = html; 
+        
+        renderArea.querySelectorAll('.exclude-export, button, small').forEach(el => el.remove());
+        renderArea.querySelectorAll('input').forEach(inp => { 
+            let span = document.createElement('span'); 
+            span.innerText = inp.value; 
+            inp.parentNode.replaceChild(span, inp); 
+        });
+
+        renderArea.querySelectorAll('th, td').forEach(cell => {
+            cell.style.border = '1px solid #444';
+            cell.style.padding = '4px';
+            cell.style.whiteSpace = 'normal';
+            cell.style.wordWrap = 'break-word';
+        });
+
+        renderArea.style.display = 'block';
+        
+        setTimeout(() => {
+            let pdfOptions = { 
+                margin: 5, 
+                filename: fileName, 
+                image: { type: 'jpeg', quality: 0.98 }, 
+                html2canvas: { scale: 2, windowWidth: 1100 }, 
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } 
+            };
+
+            let pdfWorker = html2pdf().set(pdfOptions).from(renderArea);
+
+            pdfWorker.output('blob').then((pdfBlob) => {
+                renderArea.style.display = 'none'; 
+                renderArea.innerHTML = ''; 
+                document.getElementById('app-container').style.display = 'block'; 
+                btn.innerHTML = oldText;
+
+                triggerCleanBlobDownload(pdfBlob, fileName, "PDF Report");
+            });
+        }, 500);
+    }
+
+    // ✅ APK (WEBVIEW) မပျက်ဘဲ ဒေါင်းလုဒ် အဆင်ပြေစေမည့် Clean Blob EXCEL Export
+    function exportToExcel() {
+        if (isVgmEditing) toggleVgmEdit();
+        let defaultName = document.getElementById('job-no-input').value || "SGS_Data";
+        let fileName = prompt("Excel ဖိုင်အမည်ကို ရိုက်ထည့်ပါ:", defaultName);
+        if (!fileName) return; 
+        if (!fileName.toLowerCase().endsWith('.xlsx')) fileName += ".xlsx";
+        
+        let btn = document.getElementById('btn-excel-export');
+        let oldText = btn.innerHTML;
+        btn.innerHTML = "⏳";
+        
+        setTimeout(() => {
+            try {
+                let wb = XLSX.utils.book_new();
+                
+                function getFitCols(dataArray) {
+                    let colWidths = [];
+                    dataArray.forEach(row => {
+                        if(row) {
+                            row.forEach((cell, i) => {
+                                let cellLength = cell !== null && cell !== undefined ? String(cell).length : 0;
+                                colWidths[i] = Math.max(colWidths[i] || 10, cellLength + 2);
+                            });
+                        }
+                    });
+                    return colWidths.map(w => ({ wch: Math.min(w, 50) })); 
+                }
+
+                function styleWorksheetCells(ws, isVGM = false) {
+                    const thinBorder = {
+                        top: { style: "thin", color: { rgb: "D0D7D3" } },
+                        bottom: { style: "thin", color: { rgb: "D0D7D3" } },
+                        left: { style: "thin", color: { rgb: "D0D7D3" } },
+                        right: { style: "thin", color: { rgb: "D0D7D3" } }
+                    };
+                    for (let ref in ws) {
+                        if (ref[0] === '!') continue;
+                        let cell = ws[ref];
+                        let val = String(cell.v || '').toUpperCase();
+
+                        cell.s = {
+                            font: { name: "Segoe UI", sz: 11, color: { rgb: "222222" } },
+                            alignment: { vertical: "center", horizontal: isVGM ? "center" : "left", wrapText: true },
+                            border: thinBorder
+                        };
+
+                        if (["JOB DETAILS", "WEIGHT SETUP", "GRAND SUMMARY", "CONTAINER DETAILS", "TALLY DETAILS", "CTN SUMMARY", "VGM SUMMARY"].includes(val) || val.startsWith("CONTAINER ")) {
+                            cell.s.fill = { fgColor: { rgb: "2C5E43" } };
+                            cell.s.font = { name: "Segoe UI", sz: 11, bold: true, color: { rgb: "FFFFFF" } };
+                            cell.s.alignment = { horizontal: isVGM ? "center" : "left", vertical: "center" };
+                        } else if (val.includes("TOTAL") || val.includes("AVG") || val.includes("ADDITIONAL")) {
+                            cell.s.fill = { fgColor: { rgb: "D1E7DD" } }; 
+                            cell.s.font = { name: "Segoe UI", sz: 11, bold: true, color: { rgb: "0F5132" } };
+                        }
+                    }
+                }
+
+                let jobData = [["JOB DETAILS"], []];
+                document.querySelectorAll('#jobDetailsTable tr').forEach(r => { 
+                    let labelText = r.querySelector('th') ? r.querySelector('th').innerText.replace(':','') : ''; 
+                    let inp = r.querySelector('input'); 
+                    let val = inp ? inp.value : '';
+                    if (inp && inp.type === 'date' && val && val.includes('-')) { 
+                        let parts = val.split('-'); val = `${parts[2]}/${parts[1]}/${parts[0]}`; 
+                    }
+                    jobData.push([labelText, val]); 
+                });
+                jobData.push([]); jobData.push(["REMARK", document.getElementById('job-remark').value]);
+                let wsJob = XLSX.utils.aoa_to_sheet(jobData); 
+                styleWorksheetCells(wsJob);
+                wsJob['!cols'] = getFitCols(jobData); 
+                XLSX.utils.book_append_sheet(wb, wsJob, "Job Details");
+
+                let sData = [["WEIGHT SETUP"], []];
+                let labels = ["No Of CTN (FCL)","No. of Bags each CTN","Target Tare Weight (Kg)","Target Net Wt (Kg)","Target Gross Wt (Kg)","Total Shipped Bags","Total Full Weight (Target Kg)"];
+                let ids = ['noOfCtn','bagsPerCtn','tareWt','netWt','grossWt','totalShippedBagsSetup','totalBagsWeight'];
+                labels.forEach((l, idx) => { 
+                    let el = document.getElementById(ids[idx]);
+                    sData.push([l, el ? el.value : '']); 
+                });
+                let wsSet = XLSX.utils.aoa_to_sheet(sData); 
+                styleWorksheetCells(wsSet);
+                wsSet['!cols'] = getFitCols(sData); 
+                XLSX.utils.book_append_sheet(wb, wsSet, "Weight Setup");
+
+                let noOfCtn = parseInt(document.getElementById('noOfCtn').value) || 1;
+                let cData = [["CONTAINER DETAILS"], [], ["No.", "Truck No.", "CTN No.", "Colour", "Tare Weight", "No. of Bags", "Commence", "Complete", "Gross MT", "Tare MT", "Seal No", "Tally", "Key", "ADD Wt;", ...customColumns]];
+                for(let i=1; i<=noOfCtn; i++) {
+                    let r = [
+                        i, 
+                        document.getElementById(`ctn-truck-${i}`)?.value || '', 
+                        document.getElementById(`ctn-no-input-${i}`)?.value || '', 
+                        document.getElementById(`ctn-color-${i}`)?.value || '', 
+                        document.getElementById(`ctn-tare-${i}`)?.value || '', 
+                        document.getElementById(`ctn-bagcount-${i}`)?.value || '', 
+                        document.getElementById(`ctn-com-${i}`)?.value || '', 
+                        document.getElementById(`ctn-comp-${i}`)?.value || '', 
+                        document.getElementById(`ctn-grossmt-${i}`)?.value || '', 
+                        document.getElementById(`ctn-taremt-${i}`)?.value || '', 
+                        document.getElementById(`ctn-seal-${i}`)?.value || '', 
+                        document.getElementById(`ctn-tallystr-${i}`)?.value || '', 
+                        document.getElementById(`ctn-key-${i}`)?.value || '', 
+                        document.getElementById(`ctn-addrem-${i}`)?.value || ''
+                    ];
+                    customColumns.forEach((_, idx) => r.push(document.getElementById(`ctn-dyn-${i}-${idx}`)?.value || '')); 
+                    cData.push(r);
+                }
+                let wsCtn = XLSX.utils.aoa_to_sheet(cData); 
+                styleWorksheetCells(wsCtn, true);
+                wsCtn['!cols'] = getFitCols(cData); 
+                XLSX.utils.book_append_sheet(wb, wsCtn, "Ctn Details");
+
+                let vData = [["VGM SUMMARY"], [], ["Sr.", "Container Number", "Number of Bags", "Per bag Weight", "Total Cargo Weight", ...customColumns, "Additional Kgs", "Container Tare", "Total Weight (kgs)"]];
+                for(let i=1; i<=noOfCtn; i++) {
+                    let ctnNo = document.getElementById(`ctn-no-input-${i}`)?.value || '-';
+                    let bags = document.getElementById(`ctn-bagcount-${i}`)?.value || document.getElementById(`ctn-bags-${i}`)?.innerText || '0';
+                    let avgGross = document.getElementById(`ctn-avg-gross-${i}`)?.innerText || '0.000';
+                    
+                    let cargoWtVal = (parseFloat(bags) || 0) * (parseFloat(avgGross) || 0);
+                    let cargoWtStr = cargoWtVal.toFixed(3);
+                    let r = [i, ctnNo, bags, avgGross, cargoWtStr];
+                    
+                    let ctnOverrides = vgmOverrides[i] || {};
+                    let additionsSum = 0;
+                    customColumns.forEach((colName, idx) => {
+                        let finalVal = document.getElementById(`ctn-dyn-${i}-${idx}`)?.value || '';
+                        if(ctnOverrides[colName] !== undefined) finalVal = ctnOverrides[colName]; 
+                        r.push(finalVal);
+                        additionsSum += parseFloat(finalVal) || 0;
+                    });
+                    
+                    let addVal = ctnOverrides['Add'] !== undefined ? ctnOverrides['Add'] : (document.getElementById(`ctn-addrem-${i}`)?.value || '');
+                    let tareVal = ctnOverrides['Tare'] !== undefined ? ctnOverrides['Tare'] : (document.getElementById(`ctn-tare
+        .container {
+            max-width: 900px;
+            margin: auto;
+            overflow-x: hidden;
+        }
+        h1, h2, h3 {
+            color: var(--primary);
+            word-wrap: break-word;
+            margin-top: 0;
+        }
+        
+        /* Action Bar Buttons */
+        .action-bar-btns {
+            display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+        }
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+            transition: 0.2s;
+            padding: 0;
+        }
+        .icon-btn:active { transform: scale(0.9); }
+
+        /* 3D Tabs Styling */
+        .tab-header {
+            display: flex;
+            gap: 8px; 
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 5px;
+            text-align: center;
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+            transition: all 0.1s ease;
+            outline: none;
+            box-shadow: 0 4px 0 #b3b3b3, 0 5px 5px rgba(0,0,0,0.15); 
+            position: relative;
+            top: 0;
+        }
+        .tab-btn:active {
+            box-shadow: 0 0 0 #b3b3b3, 0 1px 2px rgba(0,0,0,0.15);
+            top: 4px; 
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            border: 1px solid #1a3d2b;
+            color: white;
+            box-shadow: 0 4px 0 #1a3d2b, 0 5px 5px rgba(0,0,0,0.2);
+        }
+        .tab-btn.active:active {
+            box-shadow: 0 0 0 #1a3d2b, 0 1px 2px rgba(0,0,0,0.2);
+            top: 4px;
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .grid-2 { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media (min-width: 600px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+        
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
+        input, select, textarea {
+            padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 15px; width: 100%; box-sizing: border-box; font-family: inherit;
+        }
+        input:disabled, .readonly-input, textarea:disabled { background-color: #e9ecef; color: #6c757d; }
+        
+        .header-with-action {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 5px;
+        }
+
+        /* EXCEL-LIKE TABLES STYLING (JOB DETAILS) */
+        .excel-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
+        .excel-table th, .excel-table td { border: 1px solid #7f8c8d; padding: 6px; }
+        .excel-table th { background-color: #f1c40f; color: #333; text-align: right; width: 35%; font-weight: bold; }
+        .excel-table td { background-color: #fff; }
+        .excel-table td input { border: none; width: 100%; background: transparent; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; padding: 4px; margin: 0; }
+
+        /* CONTAINER DETAILS TABLE */
+        .ctn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .ctn-table th { background-color: #f1c40f; color: #333; border: 1px solid #7f8c8d; padding: 10px 6px; text-align: center; font-weight: bold; font-size: 12px; white-space: nowrap; }
+        .ctn-table td { border: 1px solid #7f8c8d; padding: 2px; background: #fff; vertical-align: middle; }
+        .ctn-table td input { border: 1px solid transparent; width: 100%; padding: 6px 4px; box-sizing: border-box; background: transparent; text-align: center; outline: none; font-size: 13px; font-family: inherit; }
+        .ctn-table td input:focus { border: 1px solid var(--primary-light); background: #fff; border-radius: 4px; }
+
+        .tally-row { display: flex; gap: 5px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .tally-row > * { flex: 1 1 auto; }
+        .wt-input { min-width: 80px; }
+        .count-input { width: 60px; text-align: center; font-weight: bold; }
+        
+        .btn-plus { background: #27ae60 !important; font-weight: bold; font-size: 18px !important; }
+        .btn-minus { background: #e67e22 !important; font-weight: bold; font-size: 18px !important; }
+        .btn-add-col { background: #3498db !important; color: white !important; font-weight: bold !important; padding: 8px 15px !important; border-radius: 6px !important; box-shadow: 0 3px 0 #2980b9; position: relative; top: 0; }
+        .btn-add-col:active { top: 3px; box-shadow: 0 0 0 #2980b9; }
+
+        .summary-box { background: #eef5f0; padding: 15px; border-radius: 4px; margin-top: 15px; border: 1px solid #c8d6cf; }
+        .summary-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; font-size: 14px; }
+        
+        .grand-summary { background: var(--primary); color: white; border: 2px solid #1a3d2b; }
+        .grand-summary .summary-item { border-bottom: 1px dashed rgba(255,255,255,0.3); }
+
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
+        .modal-content { background: #fff; width: 90%; max-width: 450px; padding: 20px; border-radius: 8px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+
+        .footer-kna { text-align: center; font-size: 12px; color: #888; margin-top: 20px; font-weight: bold; letter-spacing: 1px; }
+
+        #print-render-area { display: none; width: 100%; background: #fff; padding: 20px; }
+        .print-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+        .print-table th, .print-table td { border: 1px solid #444; padding: 6px; text-align: center; vertical-align: middle; word-wrap: break-word; }
+        
+        .btn-small { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; }
+        .btn-delete { background: #e74c3c; }
+        .btn-edit { background: #3498db; }
+        .btn-save { background: #27ae60; }
+        .btn-photo { background: var(--primary); color: white; padding: 10px; border: none; border-radius: 4px; width: 100%; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app-container">
+    
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; padding-top: 5px; flex-wrap: wrap; gap: 10px;">
+        <h1 style="margin: 0; color: var(--primary); font-size: 18px; line-height: 1;">SGS SURVEYOR NOTES</h1>
+        <div class="action-bar-btns">
+            <button class="icon-btn" style="background:#2ecc71; color: white;" onclick="createNewJob()" title="Start New Job">➕</button>
+            <button class="icon-btn" style="background:#3498db; color: white;" onclick="saveJobToDB()" title="Save Job to Cloud/Device">💾</button>
+            <button class="icon-btn" style="background:#9b59b6; color: white;" onclick="openLoadModal()" title="Load Saved Jobs">📂</button>
+            <button class="icon-btn" style="background:#34495e; color: white;" onclick="openSearchModal()" title="Search Container">🔍</button>
+            <button class="icon-btn" style="background:#1abc9c; color: white;" onclick="exportBackupFile()" title="Download Backup File">📥</button>
+            <button class="icon-btn" style="background:#16a085; color: white;" onclick="document.getElementById('importBackupInput').click()" title="Restore Backup File">📤</button>
+            <input type="file" id="importBackupInput" accept=".json, text/*" style="display:none;" onchange="importBackupFile(event)">
+            
+            <button class="icon-btn" style="background:#7f8c8d; color: white;" onclick="openTelegramSettings()" title="Telegram Settings">⚙️</button>
+            <button class="icon-btn" id="btn-sync-cloud" style="background:#f1c40f; color: white;" onclick="syncToTelegramCloud()" title="Sync Backup to Telegram Cloud">☁️</button>
+            
+            <button class="icon-btn" id="btn-pdf-export" style="background:#e74c3c; color: white;" onclick="exportToDirectPDF()" title="Export PDF">📄</button>
+            <button class="icon-btn" id="btn-excel-export" style="background:#27ae60; color: white;" onclick="exportToExcel()" title="Export EXCEL">📊</button>
+            <button class="icon-btn" style="background:#c0392b; color: white;" onclick="clearAppData()" title="Clear Form Data">🗑️</button>
+        </div>
+    </div>
+
+    <div class="tab-header" id="main-tab-header">
+        <button class="tab-btn active" id="btn-jobTab" onclick="openTab('jobTab')">Job & Setup</button>
+        <button class="tab-btn" id="btn-ctnTab" onclick="openTab('ctnTab')">Ctn Details</button>
+        <button class="tab-btn" id="btn-weightTab" onclick="openTab('weightTab')">Weight Details</button>
+        <button class="tab-btn" id="btn-vgmTab" onclick="openTab('vgmTab')">VGM</button>
+    </div>
+
+    <div id="jobTab" class="tab-content active">
+        <div class="card">
+            <h2>Job Details</h2>
+            <table class="excel-table" id="jobDetailsTable">
+                <tr><th>Date:</th><td><input type="date" id="job-date-actual" class="exclude-export" onchange="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Job No:</th><td><input type="text" id="job-no-input" placeholder="e.g. 2107115" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Shipper:</th><td><input type="text" id="shipper-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Buyer:</th><td><input type="text" id="buyer-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Commodity:</th><td><input type="text" id="commodity-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Quantity:</th><td><input type="text" id="quantity-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Packing:</th><td><input type="text" id="packing-input" value="IN NEW SINGLE PP BAGS" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Place of inspection:</th><td><input type="text" id="inspection-place-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Vessel:</th><td><input type="text" id="vessel-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Destination:</th><td><input type="text" id="destination-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Inspector Name:</th><td><input type="text" id="inspector-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+            </table>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Marking Photo</label>
+                <input type="text" id="marking-input" placeholder="Marking Text / Descriptions" oninput="this.setAttribute('value', this.value); saveToStorage()">
+                <input type="file" id="marking-photo-input" accept="image/*" style="display:none;" onchange="openCropper(event)">
+                <button type="button" class="btn-photo" onclick="document.getElementById('marking-photo-input').click()">📷 Take / Choose Photo</button>
+                <img id="marking-preview" src="" style="display:none; margin-top:10px; max-width:100%; border:2px dashed #bdc3c7; border-radius: 4px;">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Weight Setup</h2>
+            <div class="grid-2">
+                <div class="form-group"><label>No Of CTN (FCL)</label><select id="noOfCtn" onchange="this.setAttribute('value', this.value); handleCtnChange()"></select></div>
+                <div class="form-group"><label>No. of Bags each CTN</label><input type="number" id="bagsPerCtn" value="500" onchange="this.setAttribute('value', this.value); recalculateAll()"></div>
+                <div class="form-group"><label>Tare Weight Per Bag (Kg)</label><input type="number" step="0.001" id="tareWt" value="0.120" onchange="this.setAttribute('value', this.value); recalculateAll()"></div>
+                <div class="form-group"><label>Net Wt Per Bags (Kg)</label><input type="number" step="0.001" id="netWt" value="50.000" onchange="this.setAttribute('value', this.value); recalculateAll()"></div>
+                <div class="form-group"><label>Gross Wt Per Bags (Kg)</label><input type="number" step="0.001" id="grossWt" class="readonly-input" readonly></div>
+                <div class="form-group"><label>Total Shipped Bags</label><input type="number" id="totalShippedBagsSetup" class="readonly-input" readonly></div>
+                <div class="form-group"><label>Total Full Weight (Target Gross Kg)</label><input type="number" step="0.001" id="totalBagsWeight" class="readonly-input" readonly></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Remark</h2>
+            <textarea id="job-remark" placeholder="Enter your remarks here..." style="height: 150px; resize: vertical;" oninput="this.setAttribute('value', this.value); saveToStorage()"></textarea>
+        </div>
+    </div>
+
+    <div id="ctnTab" class="tab-content">
+        <div id="containerDetailsArea"></div>
+    </div>
+
+    <div id="weightTab" class="tab-content">
+        <div id="weightTallyArea"></div>
+        <div class="card grand-summary">
+            <h2 style="color: #fff; text-align: center; border-bottom: 1px solid #fff; padding-bottom: 10px;">SUMMARY (Grand Total)</h2>
+            <div class="summary-item"><span>Total Shipped Bags:</span> <strong id="gs-shipped-bags">0</strong></div>
+            <div class="summary-item"><span>Total Gross Wt (Kg):</span> <strong id="gs-total-gross">0.000</strong></div>
+            <div class="summary-item"><span>Avg Gross Wt/Bag (Kg):</span> <strong id="gs-avg-gross">0.000</strong></div>
+            <div class="summary-item"><span>Avg Net Wt/Bag (Kg):</span> <strong id="gs-avg-net">0.000</strong></div>
+            <div class="summary-item"><span>Total Shipped Kgs (Net):</span> <strong id="gs-shipped-kgs">0.000</strong></div>
+            <div class="summary-item"><span>Total Additional Kgs:</span> <strong id="gs-additional">0.000</strong></div>
+            <div class="summary-item" style="font-size: 1.2em; margin-top: 10px;"><span>Grand Total (Kg):</span> <strong id="gs-grand-total">0.000</strong></div>
+            <div class="summary-item" style="font-size: 1.2em; color: #a8e6cf;"><span>Grand Total (MTS):</span> <strong id="gs-grand-total-mts">0.000</strong></div>
+        </div>
+    </div>
+
+    <div id="vgmTab" class="tab-content">
+        <div id="vgmDetailsArea"></div>
+    </div>
+
+    <div class="footer-kna">By KNA</div>
+
+</div>
+
+<div id="print-render-area"></div>
+
 <!-- ✅ EXPLICIT DOWNLOAD MODAL FOR APK WEBVIEW COMPATIBILITY -->
 <div class="modal-overlay" id="downloadModal" style="z-index:999999;">
     <div class="modal-content" style="text-align:center;">
