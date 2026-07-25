@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SGS SURVEYOR NOTES</title>
     
-    <!-- PWA MANIFEST (AUTO SGS LOGO INCLUDED) -->
+    <!-- PWA MANIFEST -->
     <meta name="theme-color" content="#2C5E43">
     <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22SGS%20Surveyor%20Notes%22%2C%22short_name%22%3A%22SGS%20Notes%22%2C%22description%22%3A%22SGS%20Surveyor%20App%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f4f7f6%22%2C%22theme_color%22%3A%22%232C5E43%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fvia.placeholder.com%2F512x512.png%2F2C5E43%2FFFFFFF%3Ftext%3DSGS%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
 
@@ -35,6 +35,283 @@
             color: #333;
         }
         .container {
+            max-width: 900px;
+            margin: auto;
+            overflow-x: hidden;
+        }
+        h1, h2, h3 {
+            color: var(--primary);
+            word-wrap: break-word;
+            margin-top: 0;
+        }
+        
+        /* Action Bar Buttons */
+        .action-bar-btns {
+            display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+        }
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+            transition: 0.2s;
+            padding: 0;
+        }
+        .icon-btn:active { transform: scale(0.9); }
+
+        /* 3D Tabs Styling */
+        .tab-header {
+            display: flex;
+            gap: 8px; 
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 5px;
+            text-align: center;
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+            transition: all 0.1s ease;
+            outline: none;
+            box-shadow: 0 4px 0 #b3b3b3, 0 5px 5px rgba(0,0,0,0.15); 
+            position: relative;
+            top: 0;
+        }
+        .tab-btn:active {
+            box-shadow: 0 0 0 #b3b3b3, 0 1px 2px rgba(0,0,0,0.15);
+            top: 4px; 
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            border: 1px solid #1a3d2b;
+            color: white;
+            box-shadow: 0 4px 0 #1a3d2b, 0 5px 5px rgba(0,0,0,0.2);
+        }
+        .tab-btn.active:active {
+            box-shadow: 0 0 0 #1a3d2b, 0 1px 2px rgba(0,0,0,0.2);
+            top: 4px;
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .grid-2 { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media (min-width: 600px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+        
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
+        input, select, textarea {
+            padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 15px; width: 100%; box-sizing: border-box; font-family: inherit;
+        }
+        input:disabled, .readonly-input, textarea:disabled { background-color: #e9ecef; color: #6c757d; }
+        
+        .header-with-action {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--border); padding-bottom: 5px;
+        }
+
+        /* EXCEL-LIKE TABLES STYLING (JOB DETAILS) */
+        .excel-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
+        .excel-table th, .excel-table td { border: 1px solid #7f8c8d; padding: 6px; }
+        .excel-table th { background-color: #f1c40f; color: #333; text-align: right; width: 35%; font-weight: bold; }
+        .excel-table td { background-color: #fff; }
+        .excel-table td input { border: none; width: 100%; background: transparent; font-family: inherit; font-size: 14px; box-sizing: border-box; outline: none; padding: 4px; margin: 0; }
+
+        /* CONTAINER DETAILS TABLE */
+        .ctn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .ctn-table th { background-color: #f1c40f; color: #333; border: 1px solid #7f8c8d; padding: 10px 6px; text-align: center; font-weight: bold; font-size: 12px; white-space: nowrap; }
+        .ctn-table td { border: 1px solid #7f8c8d; padding: 2px; background: #fff; vertical-align: middle; }
+        .ctn-table td input { border: 1px solid transparent; width: 100%; padding: 6px 4px; box-sizing: border-box; background: transparent; text-align: center; outline: none; font-size: 13px; font-family: inherit; }
+        .ctn-table td input:focus { border: 1px solid var(--primary-light); background: #fff; border-radius: 4px; }
+
+        .tally-row { display: flex; gap: 5px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .tally-row > * { flex: 1 1 auto; }
+        .wt-input { min-width: 80px; }
+        .count-input { width: 60px; text-align: center; font-weight: bold; }
+        
+        .btn-plus { background: #27ae60 !important; font-weight: bold; font-size: 18px !important; }
+        .btn-minus { background: #e67e22 !important; font-weight: bold; font-size: 18px !important; }
+        .btn-add-col { background: #3498db !important; color: white !important; font-weight: bold !important; padding: 8px 15px !important; border-radius: 6px !important; box-shadow: 0 3px 0 #2980b9; position: relative; top: 0; }
+        .btn-add-col:active { top: 3px; box-shadow: 0 0 0 #2980b9; }
+
+        .summary-box { background: #eef5f0; padding: 15px; border-radius: 4px; margin-top: 15px; border: 1px solid #c8d6cf; }
+        .summary-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; font-size: 14px; }
+        
+        .grand-summary { background: var(--primary); color: white; border: 2px solid #1a3d2b; }
+        .grand-summary .summary-item { border-bottom: 1px dashed rgba(255,255,255,0.3); }
+
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
+        .modal-content { background: #fff; width: 90%; max-width: 450px; padding: 20px; border-radius: 8px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+
+        .footer-kna { text-align: center; font-size: 12px; color: #888; margin-top: 20px; font-weight: bold; letter-spacing: 1px; }
+
+        #print-render-area { display: none; width: 100%; background: #fff; padding: 20px; }
+        .print-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+        .print-table th, .print-table td { border: 1px solid #444; padding: 6px; text-align: center; vertical-align: middle; word-wrap: break-word; }
+        
+        .btn-small { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; }
+        .btn-delete { background: #e74c3c; }
+        .btn-edit { background: #3498db; }
+        .btn-save { background: #27ae60; }
+        .btn-photo { background: var(--primary); color: white; padding: 10px; border: none; border-radius: 4px; width: 100%; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app-container">
+    
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; padding-top: 5px; flex-wrap: wrap; gap: 10px;">
+        <h1 style="margin: 0; color: var(--primary); font-size: 18px; line-height: 1;">SGS SURVEYOR NOTES</h1>
+        <div class="action-bar-btns">
+            <button class="icon-btn" style="background:#2ecc71; color: white;" onclick="createNewJob()" title="Start New Job">➕</button>
+            <button class="icon-btn" style="background:#3498db; color: white;" onclick="saveJobToDB()" title="Save Job to Cloud/Device">💾</button>
+            <button class="icon-btn" style="background:#9b59b6; color: white;" onclick="openLoadModal()" title="Load Saved Jobs">📂</button>
+            <button class="icon-btn" style="background:#34495e; color: white;" onclick="openSearchModal()" title="Search Container">🔍</button>
+            <button class="icon-btn" style="background:#1abc9c; color: white;" onclick="exportBackupFile()" title="Download Backup File">📥</button>
+            <button class="icon-btn" style="background:#16a085; color: white;" onclick="document.getElementById('importBackupInput').click()" title="Restore Backup File">📤</button>
+            <input type="file" id="importBackupInput" accept=".json, text/*" style="display:none;" onchange="importBackupFile(event)">
+            
+            <button class="icon-btn" style="background:#7f8c8d; color: white;" onclick="openTelegramSettings()" title="Telegram Settings">⚙️</button>
+            <button class="icon-btn" id="btn-sync-cloud" style="background:#f1c40f; color: white;" onclick="syncToTelegramCloud()" title="Sync Backup to Telegram Cloud">☁️</button>
+            
+            <button class="icon-btn" id="btn-pdf-export" style="background:#e74c3c; color: white;" onclick="exportToDirectPDF()" title="Export PDF">📄</button>
+            <button class="icon-btn" id="btn-excel-export" style="background:#27ae60; color: white;" onclick="exportToExcel()" title="Export EXCEL">📊</button>
+            <button class="icon-btn" style="background:#c0392b; color: white;" onclick="clearAppData()" title="Clear Form Data">🗑️</button>
+        </div>
+    </div>
+
+    <div class="tab-header" id="main-tab-header">
+        <button class="tab-btn active" id="btn-jobTab" onclick="openTab('jobTab')">Job & Setup</button>
+        <button class="tab-btn" id="btn-ctnTab" onclick="openTab('ctnTab')">Ctn Details</button>
+        <button class="tab-btn" id="btn-weightTab" onclick="openTab('weightTab')">Weight Details</button>
+        <button class="tab-btn" id="btn-vgmTab" onclick="openTab('vgmTab')">VGM</button>
+    </div>
+
+    <div id="jobTab" class="tab-content active">
+        <div class="card">
+            <h2>Job Details</h2>
+            <table class="excel-table" id="jobDetailsTable">
+                <tr><th>Date:</th><td><input type="date" id="job-date-actual" class="exclude-export" onchange="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Job No:</th><td><input type="text" id="job-no-input" placeholder="e.g. 2107115" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Shipper:</th><td><input type="text" id="shipper-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Buyer:</th><td><input type="text" id="buyer-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Commodity:</th><td><input type="text" id="commodity-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Quantity:</th><td><input type="text" id="quantity-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Packing:</th><td><input type="text" id="packing-input" value="IN NEW SINGLE PP BAGS" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Place of inspection:</th><td><input type="text" id="inspection-place-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Vessel:</th><td><input type="text" id="vessel-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Destination:</th><td><input type="text" id="destination-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+                <tr><th>Inspector Name:</th><td><input type="text" id="inspector-input" oninput="this.setAttribute('value', this.value); saveToStorage()"></td></tr>
+            </table>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Marking Photo</label>
+                <input type="text" id="marking-input" placeholder="Marking Text / Descriptions" oninput="this.setAttribute('value', this.value); saveToStorage()">
+                <input type="file" id="marking-photo-input" accept="image/*" style="display:none;" onchange="openCropper(event)">
+                <button type="button" class="btn-photo" onclick="document.getElementById('marking-photo-input').click()">📷 Take / Choose Photo</button>
+                <img id="marking-preview" src="" style="display:none; margin-top:10px; max-width:100%; border:2px dashed #bdc3c7; border-radius: 4px;">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Weight Setup</h2>
+            <div class="grid-2">
+                <div class="form-group"><label>No Of CTN (FCL)</label><select id="noOfCtn" onchange="this.setAttribute('value', this.value); handleCtnChange()"></select></div>
+                <div class="form-group"><label>No. of Bags each CTN</label><input type="number" id="bagsPerCtn" value="500" onchange="this.setAttribute('value', this.value); recalculateAll()"></div>
+                <div class="form-group"><label>Tare Weight Per Bag (Kg)</label><input type="number" step="0.001" id="tareWt" value="0.120" onchange="this.setAttribute('value', this.value); recalculateAll()"></div>
+                <div class="form-group"><label>Net Wt Per Bags (Kg)</label><input type="number" step="0.001" id="netWt" value="50.000" onchange="this.setAttribute('value', this.value); recalculateAll()"></div>
+                <div class="form-group"><label>Gross Wt Per Bags (Kg)</label><input type="number" step="0.001" id="grossWt" class="readonly-input" readonly></div>
+                <div class="form-group"><label>Total Shipped Bags</label><input type="number" id="totalShippedBagsSetup" class="readonly-input" readonly></div>
+                <div class="form-group"><label>Total Full Weight (Target Gross Kg)</label><input type="number" step="0.001" id="totalBagsWeight" class="readonly-input" readonly></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Remark</h2>
+            <textarea id="job-remark" placeholder="Enter your remarks here..." style="height: 150px; resize: vertical;" oninput="this.setAttribute('value', this.value); saveToStorage()"></textarea>
+        </div>
+    </div>
+
+    <div id="ctnTab" class="tab-content">
+        <div id="containerDetailsArea"></div>
+    </div>
+
+    <div id="weightTab" class="tab-content">
+        <div id="weightTallyArea"></div>
+        <div class="card grand-summary">
+            <h2 style="color: #fff; text-align: center; border-bottom: 1px solid #fff; padding-bottom: 10px;">SUMMARY (Grand Total)</h2>
+            <div class="summary-item"><span>Total Shipped Bags:</span> <strong id="gs-shipped-bags">0</strong></div>
+            <div class="summary-item"><span>Total Gross Wt (Kg):</span> <strong id="gs-total-gross">0.000</strong></div>
+            <div class="summary-item"><span>Avg Gross Wt/Bag (Kg):</span> <strong id="gs-avg-gross">0.000</strong></div>
+            <div class="summary-item"><span>Avg Net Wt/Bag (Kg):</span> <strong id="gs-avg-net">0.000</strong></div>
+            <div class="summary-item"><span>Total Shipped Kgs (Net):</span> <strong id="gs-shipped-kgs">0.000</strong></div>
+            <div class="summary-item"><span>Total Additional Kgs:</span> <strong id="gs-additional">0.000</strong></div>
+            <div class="summary-item" style="font-size: 1.2em; margin-top: 10px;"><span>Grand Total (Kg):</span> <strong id="gs-grand-total">0.000</strong></div>
+            <div class="summary-item" style="font-size: 1.2em; color: #a8e6cf;"><span>Grand Total (MTS):</span> <strong id="gs-grand-total-mts">0.000</strong></div>
+        </div>
+    </div>
+
+    <div id="vgmTab" class="tab-content">
+        <div id="vgmDetailsArea"></div>
+    </div>
+
+    <div class="footer-kna">By KNA</div>
+
+</div>
+
+<div id="print-render-area"></div>
+
+<!-- Crop Modal -->
+<div class="modal-overlay" id="cropModal" style="z-index:99999;">
+    <div class="modal-content" id="cropModalContent">
+        <div style="width:100%; height:60vh; overflow:hidden; margin-bottom:15px; background:#e0e0e0; display:flex; align-items:center; justify-content:center;">
+            <img id="imageToCrop" src="" style="max-width:100%; max-height:100%; display:block;">
+        </div>
+        <div id="cropModalActions">
+            <button onclick="closeCropper()" style="background:#e74c3c; padding:10px 20px; color:white; border:none; border-radius:4px; font-weight:bold;">Cancel</button>
+            <button onclick="applyCrop()" style="background:#2ecc71; padding:10px 20px; color:white; border:none; border-radius:4px; font-weight:bold;">Crop & Save</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="loadJobModal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); margin-bottom:15px; padding-bottom:5px;">
+            <h2 style="margin:0; color:var(--primary);">Saved Jobs Database</h2>
+            <button onclick="closeLoadModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#333;">❌</button>
+        </div>
+        <div id="savedJobsList"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="searchModal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); margin-bottom:15px; padding-bottom:5px;">
+            <h2 style="margin:0; color:var(--primary);">Search Container</h2>
+            <button onclick="closeSearchModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#333;">❌</button>
+        </div>
+        <input type="text" id="searchInput" placeholder="Enter Container Number..." style="width: 100%; padding: 10px; font-size: 16px; margin-bottom: 15px; border: 2px solid var(--primary); border-radius: 6px; box-sizing: border-box;" oninput="        .container {
             max-width: 900px;
             margin: auto;
             overflow-x: hidden;
