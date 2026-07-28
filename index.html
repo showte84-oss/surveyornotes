@@ -154,9 +154,8 @@
         <div class="card">
             <h2>Weight Setup</h2>
             <div class="grid-2">
-                <!-- ✅ Decimal ပြောင်းလဲရန် Dropdown အသစ် -->
                 <div class="form-group" style="grid-column: 1 / -1;">
-                    <label style="color:#d35400;">⚙️ Precision/Decimal  (ဒဿမ နေရာရွေးပါ)</label>
+                    <label style="color:#d35400;">⚙️ Precision/Decimal  (ဒဿမ နေရာရွေးရန်)</label>
                     <select id="decimal-setup" onchange="this.setAttribute('value', this.value); recalculateAll(); saveToStorage()" style="border-color:#d35400; background:#fff3e0;">
                         <option value="2">2 Places (e.g. 0.00)</option>
                         <option value="3" selected>3 Places (e.g. 0.000)</option>
@@ -300,6 +299,7 @@
         }
     } catch(e) {}
 
+    // Service Worker ကို Cache မလုပ်စေရန် အဟောင်းကို ပိတ်ထားသည်
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
             for(let registration of registrations) { registration.unregister(); }
@@ -327,6 +327,7 @@
 
     let vgmOverrides = safeParseJSON(localStorage.getItem('sgs_vgm_overrides'), {});
     let isVgmEditing = false;
+    // SGS Seal ကို Default Column အဖြစ် သတ်မှတ်ထားသည်
     let customColumns = ['SGS Seal']; 
     let loadedCols = safeParseJSON(localStorage.getItem('sgs_custom_cols'), []);
     if (Array.isArray(loadedCols) && loadedCols.length > 0) customColumns = loadedCols;
@@ -629,7 +630,7 @@
         if (!fileName.toLowerCase().endsWith('.json')) fileName += ".json";
         
         let fullData = {
-            sgs_version: "8.7_DecimalDynamic",
+            sgs_version: "8.8_FinalFix",
             sgs_app_data_final: localStorage.getItem('sgs_app_data_final') || "{}",
             sgs_vgm_overrides: localStorage.getItem('sgs_vgm_overrides') || "{}",
             sgs_custom_cols: localStorage.getItem('sgs_custom_cols') || "[]",
@@ -699,7 +700,7 @@
         btn.innerHTML = "⏳";
 
         let backupObj = {
-            sgs_version: "8.7_DecimalDynamic",
+            sgs_version: "8.8_FinalFix",
             sgs_app_data_final: safeParseJSON(localStorage.getItem('sgs_app_data_final'), {}),
             sgs_vgm_overrides: safeParseJSON(localStorage.getItem('sgs_vgm_overrides'), {}),
             sgs_custom_cols: safeParseJSON(localStorage.getItem('sgs_custom_cols'), []),
@@ -830,25 +831,23 @@
     }
 
     // =========================================================================
-    // ✅ NEW DYNAMIC DECIMAL LOGIC
+    // ✅ NEW DYNAMIC DECIMAL & EXACT CALCULATION LOGIC
     // =========================================================================
     
-    // User ရွေးချယ်ထားသော Decimal အရေအတွက်ကို ယူမည်
     function getDec() {
         let el = document.getElementById('decimal-setup');
         return el ? (parseInt(el.value) || 3) : 3;
     }
 
-    // သင်္ချာတွက်ရန် အတိအကျဖြတ်မည့် Function (Number ပြန်ပေးမည်)
+    // Floating Point Error ဖြေရှင်းထားသော စနစ်
     function truncWt(num) {
         if (isNaN(num) || !isFinite(num)) return 0;
         let dec = getDec();
         let mult = Math.pow(10, dec);
-        let cleanNum = Number(num.toPrecision(14));
-        return Math.trunc(cleanNum * mult) / mult;
+        let fixedFloat = Math.round(num * 10000000) / 10000000;
+        return Math.trunc(fixedFloat * mult) / mult;
     }
 
-    // မျက်နှာပြင်တွင် ပြသရန် Formatting Function (String ပြန်ပေးမည်)
     function formatWt(num) {
         return truncWt(num).toFixed(getDec());
     }
@@ -944,7 +943,6 @@
                 <td style="text-align:center;" class="exclude-export"><button onclick="deleteCtnRow(${i})" style="border:none; border-radius:4px; padding:4px 8px; background:#e74c3c; color:white; cursor:pointer;">x</button></td>
             </tr>`;
 
-            // ✅ Dynamic formatWt() for Zeros initialization
             let initZero = formatWt(0);
 
             weightArea.insertAdjacentHTML('beforeend', `<div class="card"><h3 id="ctn-tally-title-${i}">${titleStr}</h3><div class="form-group"><label>Tally Percentage (%)</label><select id="ctn-percent-${i}" oninput="this.setAttribute('value', this.value); saveToStorage()"><option value="10">10%</option><option value="20">20%</option><option value="100">100%</option></select></div><div id="tally-list-${i}"><div class="tally-row"><input type="number" step="0.001" placeholder="Wt(Kg)" id="tally-wt-${i}-0" class="wt-input" oninput="updateContainer(${i})"><button class="btn-small btn-minus" onclick="adjustCount(this, -1, ${i})">-</button><input type="number" value="0" id="tally-cnt-${i}-0" class="count-input" oninput="updateContainer(${i})"><button class="btn-small btn-plus" onclick="adjustCount(this, 1, ${i})">+</button></div></div><button class="btn-small" style="background:#555;" onclick="addTallyRow(${i})">+ Add Wt Group</button><div class="summary-box"><div class="summary-item">Bags: <strong id="ctn-bags-${i}">0</strong></div><div class="summary-item">Total: <strong id="gs-gross-placeholder-${i}">${initZero}</strong></div><div class="summary-item">Avg: <strong id="ctn-avg-gross-${i}">${initZero}</strong></div><div class="summary-item">Full Wt: <strong id="ctn-full-${i}">${initZero}</strong></div><div class="summary-item" style="color:var(--primary);">Add. Kgs: <strong id="ctn-additional-${i}">${initZero}</strong></div></div></div>`);
@@ -1012,6 +1010,7 @@
         calculateGrand(); updateVGM(); 
     }
 
+    // ✅ (၂) Grand Total အား အတိအကျ Full Weight ထွက်စေမည့် Function
     function calculateGrand() {
         try {
             let noOfCtn = parseInt(document.getElementById('noOfCtn').value) || 1;
@@ -1035,12 +1034,12 @@
             
             let avgGross = totalTallyBags > 0 ? truncWt(sumGross / totalTallyBags) : 0;
             let avgNet = Math.max(0, truncWt(avgGross - tareWt));
-            
             let totalActualNetWt = truncWt(avgNet * totalShippedBags);
             let fullNetWt = truncWt(setupNetWt * totalShippedBags);
             let calcAdditionalKgs = truncWt(fullNetWt - totalActualNetWt);
 
-            let grandTotalKgs = truncWt(totalActualNetWt + calcAdditionalKgs);
+            // 💡 Grand Total ကို အမြဲတမ်း Full Net Weight အတိအကျ ဖြစ်အောင်လုပ်ထားသည်
+            let grandTotalKgs = fullNetWt;
             let grandTotalMts = truncWt(grandTotalKgs / 1000);
 
             document.getElementById('gs-shipped-bags').innerText = totalShippedBags;
