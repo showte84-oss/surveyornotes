@@ -96,7 +96,9 @@
         <h1 style="margin: 0; color: var(--primary); font-size: 18px; line-height: 1;">SGS SURVEYOR NOTES</h1>
         <div class="action-bar-btns">
             <button class="icon-btn" style="background:#2ecc71; color: white;" onclick="createNewJob()" title="Start New Job">➕</button>
-            <button class="icon-btn" style="background:#3498db; color: white;" onclick="saveJobToDB()" title="Save Job to Cloud/Device">💾</button>
+            <button class="icon-btn" style="background:#3498db; color: white;" onclick="saveJobToDB()" title="Save Job">💾</button>
+            <!-- ✅ အသစ်ထည့်သွင်းထားသော Save As ခလုတ် -->
+            <button class="icon-btn" style="background:#8e44ad; color: white;" onclick="saveAsJobToDB()" title="Save As New Job">📝</button>
             <button class="icon-btn" style="background:#9b59b6; color: white;" onclick="openLoadModal()" title="Load Saved Jobs">📂</button>
             <button class="icon-btn" style="background:#34495e; color: white;" onclick="openSearchModal()" title="Search Container">🔍</button>
             <button class="icon-btn" style="background:#1abc9c; color: white;" onclick="exportBackupFile()" title="Download Backup File">📥</button>
@@ -154,8 +156,9 @@
         <div class="card">
             <h2>Weight Setup</h2>
             <div class="grid-2">
+                <!-- ✅ ပြင်ဆင်ထားသော Precision စာသား -->
                 <div class="form-group" style="grid-column: 1 / -1;">
-                    <label style="color:#d35400;">⚙️ Precision/Decimal  (ဒဿမ နေရာရွေးရန်)</label>
+                    <label style="color:#d35400;">⚙️ Precision / Decimal (ဒဿမနေရာရွေးရန်)</label>
                     <select id="decimal-setup" onchange="this.setAttribute('value', this.value); recalculateAll(); saveToStorage()" style="border-color:#d35400; background:#fff3e0;">
                         <option value="2">2 Places (e.g. 0.00)</option>
                         <option value="3" selected>3 Places (e.g. 0.000)</option>
@@ -299,7 +302,6 @@
         }
     } catch(e) {}
 
-    // Service Worker ကို Cache မလုပ်စေရန် အဟောင်းကို ပိတ်ထားသည်
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
             for(let registration of registrations) { registration.unregister(); }
@@ -327,7 +329,6 @@
 
     let vgmOverrides = safeParseJSON(localStorage.getItem('sgs_vgm_overrides'), {});
     let isVgmEditing = false;
-    // SGS Seal ကို Default Column အဖြစ် သတ်မှတ်ထားသည်
     let customColumns = ['SGS Seal']; 
     let loadedCols = safeParseJSON(localStorage.getItem('sgs_custom_cols'), []);
     if (Array.isArray(loadedCols) && loadedCols.length > 0) customColumns = loadedCols;
@@ -457,6 +458,20 @@
             .catch((error) => { alert("⚠️ ဖုန်းထဲတွင်သာ သိမ်းဆည်းပြီးပါပြီ။ (Cloud သို့ မရောက်သေးပါ)"); });
         } else {
             alert("✅ Job No: [" + jobNo + "] ကို ဖုန်းတွင်းသို့ သိမ်းဆည်းပြီးပါပြီ။");
+        }
+    }
+
+    // ✅ အသစ်ထည့်သွင်းထားသော Save As Job လုပ်ဆောင်ချက်
+    function saveAsJobToDB() {
+        let currentJobNo = document.getElementById('job-no-input').value.trim();
+        let newJobNo = prompt("📝 Save As\n\nJob No အသစ် (သို့မဟုတ်) အမည်အသစ်ကို ရိုက်ထည့်ပါ:", currentJobNo);
+        
+        if(newJobNo && newJobNo.trim() !== "") {
+            document.getElementById('job-no-input').value = newJobNo.trim();
+            document.getElementById('job-no-input').setAttribute('value', newJobNo.trim());
+            saveJobToDB();
+        } else {
+            alert("⚠️ Save As မလုပ်ဖြစ်ပါ။");
         }
     }
 
@@ -630,7 +645,7 @@
         if (!fileName.toLowerCase().endsWith('.json')) fileName += ".json";
         
         let fullData = {
-            sgs_version: "8.8_FinalFix",
+            sgs_version: "8.9_SaveAs_Added",
             sgs_app_data_final: localStorage.getItem('sgs_app_data_final') || "{}",
             sgs_vgm_overrides: localStorage.getItem('sgs_vgm_overrides') || "{}",
             sgs_custom_cols: localStorage.getItem('sgs_custom_cols') || "[]",
@@ -700,7 +715,7 @@
         btn.innerHTML = "⏳";
 
         let backupObj = {
-            sgs_version: "8.8_FinalFix",
+            sgs_version: "8.9_SaveAs_Added",
             sgs_app_data_final: safeParseJSON(localStorage.getItem('sgs_app_data_final'), {}),
             sgs_vgm_overrides: safeParseJSON(localStorage.getItem('sgs_vgm_overrides'), {}),
             sgs_custom_cols: safeParseJSON(localStorage.getItem('sgs_custom_cols'), []),
@@ -830,16 +845,11 @@
         if(save) saveToStorage();
     }
 
-    // =========================================================================
-    // ✅ NEW DYNAMIC DECIMAL & EXACT CALCULATION LOGIC
-    // =========================================================================
-    
     function getDec() {
         let el = document.getElementById('decimal-setup');
         return el ? (parseInt(el.value) || 3) : 3;
     }
 
-    // Floating Point Error ဖြေရှင်းထားသော စနစ်
     function truncWt(num) {
         if (isNaN(num) || !isFinite(num)) return 0;
         let dec = getDec();
@@ -1010,7 +1020,6 @@
         calculateGrand(); updateVGM(); 
     }
 
-    // ✅ (၂) Grand Total အား အတိအကျ Full Weight ထွက်စေမည့် Function
     function calculateGrand() {
         try {
             let noOfCtn = parseInt(document.getElementById('noOfCtn').value) || 1;
@@ -1038,7 +1047,6 @@
             let fullNetWt = truncWt(setupNetWt * totalShippedBags);
             let calcAdditionalKgs = truncWt(fullNetWt - totalActualNetWt);
 
-            // 💡 Grand Total ကို အမြဲတမ်း Full Net Weight အတိအကျ ဖြစ်အောင်လုပ်ထားသည်
             let grandTotalKgs = fullNetWt;
             let grandTotalMts = truncWt(grandTotalKgs / 1000);
 
