@@ -97,7 +97,6 @@
         <div class="action-bar-btns">
             <button class="icon-btn" style="background:#2ecc71; color: white;" onclick="createNewJob()" title="Start New Job">➕</button>
             <button class="icon-btn" style="background:#3498db; color: white;" onclick="saveJobToDB()" title="Save Job">💾</button>
-            <!-- ✅ အသစ်ထည့်သွင်းထားသော Save As ခလုတ် -->
             <button class="icon-btn" style="background:#8e44ad; color: white;" onclick="saveAsJobToDB()" title="Save As New Job">📝</button>
             <button class="icon-btn" style="background:#9b59b6; color: white;" onclick="openLoadModal()" title="Load Saved Jobs">📂</button>
             <button class="icon-btn" style="background:#34495e; color: white;" onclick="openSearchModal()" title="Search Container">🔍</button>
@@ -156,7 +155,6 @@
         <div class="card">
             <h2>Weight Setup</h2>
             <div class="grid-2">
-                <!-- ✅ ပြင်ဆင်ထားသော Precision စာသား -->
                 <div class="form-group" style="grid-column: 1 / -1;">
                     <label style="color:#d35400;">⚙️ Precision / Decimal (ဒဿမနေရာရွေးရန်)</label>
                     <select id="decimal-setup" onchange="this.setAttribute('value', this.value); recalculateAll(); saveToStorage()" style="border-color:#d35400; background:#fff3e0;">
@@ -302,6 +300,7 @@
         }
     } catch(e) {}
 
+    // Service Worker ကို Cache မလုပ်စေရန် အဟောင်းကို ပိတ်ထားသည်
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
             for(let registration of registrations) { registration.unregister(); }
@@ -461,7 +460,6 @@
         }
     }
 
-    // ✅ အသစ်ထည့်သွင်းထားသော Save As Job လုပ်ဆောင်ချက်
     function saveAsJobToDB() {
         let currentJobNo = document.getElementById('job-no-input').value.trim();
         let newJobNo = prompt("📝 Save As\n\nJob No အသစ် (သို့မဟုတ်) အမည်အသစ်ကို ရိုက်ထည့်ပါ:", currentJobNo);
@@ -645,7 +643,7 @@
         if (!fileName.toLowerCase().endsWith('.json')) fileName += ".json";
         
         let fullData = {
-            sgs_version: "8.9_SaveAs_Added",
+            sgs_version: "9.1_UndefinedFix",
             sgs_app_data_final: localStorage.getItem('sgs_app_data_final') || "{}",
             sgs_vgm_overrides: localStorage.getItem('sgs_vgm_overrides') || "{}",
             sgs_custom_cols: localStorage.getItem('sgs_custom_cols') || "[]",
@@ -715,7 +713,7 @@
         btn.innerHTML = "⏳";
 
         let backupObj = {
-            sgs_version: "8.9_SaveAs_Added",
+            sgs_version: "9.1_UndefinedFix",
             sgs_app_data_final: safeParseJSON(localStorage.getItem('sgs_app_data_final'), {}),
             sgs_vgm_overrides: safeParseJSON(localStorage.getItem('sgs_vgm_overrides'), {}),
             sgs_custom_cols: safeParseJSON(localStorage.getItem('sgs_custom_cols'), []),
@@ -772,7 +770,12 @@
 
     function addCtnColumn() {
         let name = prompt("Enter Column Name:");
-        if(name) { customColumns.push(name.trim()); saveToStorage(); generateDynamicContent(); }
+        if(name) { 
+            saveToStorage(); 
+            customColumns.push(name.trim()); 
+            localStorage.setItem('sgs_custom_cols', JSON.stringify(customColumns)); 
+            loadFromStorage(); 
+        }
     }
 
     function removeCtnColumn(idx) {
@@ -945,9 +948,10 @@
                 <td><input type="text" id="ctn-key-${i}" style="min-width: 70px;" oninput="saveToStorage()"></td>
                 <td><input type="number" step="0.001" id="ctn-addrem-${i}" style="min-width: 80px;" oninput="updateVGM(); calculateGrand(); saveToStorage();"></td>
                 ${customColumns.map((c, idx) => {
+                    // ✅ ပြင်ဆင်ထားသော Undefined ဖြေရှင်းမှုအပိုင်း
                     let existing = currentData.inputs[`ctn-dyn-${i}-${idx}`];
-                    let val = existing;
-                    if ((!val || val.trim() === '') && c.trim().toLowerCase() === 'sgs seal') { val = '0.012'; }
+                    let val = (existing !== undefined && existing !== null) ? existing : '';
+                    if (val === '' && c.trim().toLowerCase() === 'sgs seal') { val = '0.012'; }
                     return `<td><input type="text" id="ctn-dyn-${i}-${idx}" value="${val}" style="min-width: 90px;" oninput="updateVGM(); saveToStorage();"></td>`;
                 }).join('')}
                 <td style="text-align:center;" class="exclude-export"><button onclick="deleteCtnRow(${i})" style="border:none; border-radius:4px; padding:4px 8px; background:#e74c3c; color:white; cursor:pointer;">x</button></td>
